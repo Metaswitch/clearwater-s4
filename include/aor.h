@@ -57,6 +57,8 @@ public:
   /// The address of record, e.g. "sip:name@example.com".
   std::string _address_of_record;
 
+  /// This is the binding ID. SDM-REFACTOR-TODO: Actually it might not always be.
+  /// See get_binding_id() in registrarsproutlet.cpp
   /// The registered contact URI, e.g.,
   /// "sip:2125551212@192.168.0.1:55491;transport=TCP;rinstance=fad34fbcdea6a931"
   std::string _uri;
@@ -96,6 +98,9 @@ public:
 
   /// Whether this is an emergency registration.
   bool _emergency_registration;
+
+  /// Returns the ID of this binding.
+  std::string get_id() const { return _uri; }
 
   /// Serialize the binding as a JSON object.
   ///
@@ -148,6 +153,9 @@ public:
   /// The time (in seconds since the epoch) at which this subscription
   /// should expire.
   int _expires;
+
+  /// Returns the ID of this subscription.
+  std::string get_id() const { return _to_tag; }
 
   /// Serialize the subscription as a JSON object.
   ///
