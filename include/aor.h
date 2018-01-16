@@ -172,17 +172,31 @@ public:
 };
 
 // SDM-REFACTOR-TODO: prototype
-struct PatchObject
+class PatchObject
 {
-  PatchObject() : _increment(false) {}
+public:
+  // Constructor
+  PatchObject();
 
-  std::vector<Binding> _bindings_to_update;
-  std::vector<std::string> _bindings_to_remove;
-  Subscription _subscription_to_update;
-  std::string _subscription_to_remove;
+  /// Destructor
+  ~PatchObject();
+
+  inline std::map<std::string, Binding*> update_bindings() { return _update_bindings; }
+  inline std::vector<std::string> remove_bindings() { return _remove_bindings; }
+  inline std::map<std::string, Subscription*> update_subscriptions() { return _update_subscriptions; }
+  inline std::vector<std::string> remove_subscriptions() { return _remove_subscriptions; }
+  inline AssociatedURIs associated_uris() { return _associated_uris; }
+  inline int minimum_cseq() { return _minimum_cseq; }
+  inline bool increment_cseq() { return _increment_cseq; }
+
+private:
+  std::map<std::string, Binding*> _update_bindings;
+  std::vector<std::string> _remove_bindings;
+  std::map<std::string, Subscription*> _update_subscriptions;
+  std::vector<std::string> _remove_subscriptions;
   AssociatedURIs _associated_uris;
-  int _min_cseq;
-  bool _increment;
+  int _minimum_cseq;
+  bool _increment_cseq;
 };
 
 /// @class AoR
@@ -258,8 +272,9 @@ public:
   void copy_aor(AoR* source_aor);
 
   // SDM-REFACTOR-TODO: Implement/comment/test
-  int get_expiry() { return 1; }
-  void patch_aor(PatchObject* po) {};
+  void get_next_and_last_expires(int& next_expires, int& last_expires);
+  void patch_aor(PatchObject* po);
+
   void convert_aor_to_patch(PatchObject* po) {};
   void convert_patch_to_aor(PatchObject* po) {};
 
