@@ -189,6 +189,14 @@ public:
   inline int minimum_cseq() { return _minimum_cseq; }
   inline bool increment_cseq() { return _increment_cseq; }
 
+  inline void set_update_bindings(std::map<std::string, Binding*> bindings) { _update_bindings = bindings; }
+  inline void set_remove_bindings(std::vector<std::string> bindings) { _remove_bindings = bindings; }
+  inline void set_update_subscriptions(std::map<std::string, Subscription*> subscriptions) { _update_subscriptions = subscriptions; }
+  inline void set_remove_subscriptions(std::vector<std::string> subscriptions) { _remove_subscriptions = subscriptions; }
+  inline void set_associated_uris(AssociatedURIs associated_uris) { _associated_uris = associated_uris; }
+  inline void set_minimum_cseq(int minimum) { _minimum_cseq = minimum; }
+  inline void set_increment_cseq(bool increment) { _increment_cseq = increment; }
+
 private:
   std::map<std::string, Binding*> _update_bindings;
   std::vector<std::string> _remove_bindings;
