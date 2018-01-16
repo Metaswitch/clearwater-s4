@@ -29,8 +29,6 @@
 #include "utils.h"
 #include "s4.h"
 #include "astaire_aor_store.h"
-#include "sproutsasevent.h"
-#include "constants.h"
 
 // SDM-REFACTOR-TODO:
 // 1. Commonise logic in the handles? Or at least make more similar.
