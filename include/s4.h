@@ -36,17 +36,17 @@ public:
   /// Destructor.
   virtual ~S4();
 
-  HTTPCode handle_get(std::string aor_id,
-                      AoR** aor,
-                      SAS::TrailId trail);
-  HTTPCode handle_delete(std::string aor_id,
-                         SAS::TrailId trail);
-  HTTPCode handle_put(std::string aor_id,
-                      AoR* aor,
-                      SAS::TrailId id);
-  HTTPCode handle_patch(std::string aor_id,
-                        PatchObject* patch_object,
-                        SAS::TrailId trail);
+  virtual HTTPCode handle_get(std::string aor_id,
+                              AoR** aor,
+                              SAS::TrailId trail);
+  virtual HTTPCode handle_delete(std::string aor_id,
+                                 SAS::TrailId trail);
+  virtual HTTPCode handle_put(std::string aor_id,
+                              AoR* aor,
+                              SAS::TrailId id);
+  virtual HTTPCode handle_patch(std::string aor_id,
+                                PatchObject* patch_object,
+                                SAS::TrailId trail);
 
 private:
   void replicate_delete_cross_site(std::string aor_id,
