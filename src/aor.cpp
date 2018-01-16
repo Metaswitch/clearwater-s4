@@ -358,6 +358,39 @@ void Subscription::from_json(const rapidjson::Value& s_obj)
   JSON_GET_INT_MEMBER(s_obj, JSON_EXPIRES, _expires);
 }
 
+void AoR::get_next_and_last_expires(int& next_expires, int& last_expires)
+{
+  // Set a temp int to INT_MAX to compare expiry times to.
+  next_expires = INT_MAX;
+  last_expires = 0;
+
+  for (std::pair<std::string, Binding*> b : _bindings)
+  {
+    if (b.second->_expires < next_expires)
+    {
+      next_expires = b.second->_expires;
+    }
+
+    if (b.second->_expires > last_expires)
+    {
+      last_expires = b.second->_expires;
+    }
+  }
+
+  for (std::pair<std::string, Subscription*> s : _subscriptions)
+  {
+    if (s.second->_expires < next_expires)
+    {
+      next_expires = s.second->_expires;
+    }
+
+    if (s.second->_expires > last_expires)
+    {
+      last_expires = s.second->_expires;
+    }
+  }
+}
+
 // Utility function to return the expiry time of the binding or subscription due
 // to expire next. If the function finds no expiry times in the bindings or
 // subscriptions it returns 0. This function should never be called on an empty AoR,
@@ -543,4 +576,104 @@ AoR::Subscriptions AoRPair::get_removed_subscriptions()
     }
   }
   return removed_subscriptions;
+}
+
+void AoR::patch_aor(PatchObject* po)
+{
+  for (std::pair<std::string, Binding*> b : po->update_bindings())
+  {
+    for (std::pair<std::string, Binding*> b2 : _bindings)
+    {
+      if (b.first == b2.first)
+      {
+        _bindings.erase(b2.first);
+        delete b2.second;
+        break;
+      }
+    }
+
+    Binding* copy_b = new Binding(*(b.second));
+    _bindings.insert(std::make_pair(b.first, copy_b));
+  }
+
+  for (std::string b_id : po->remove_bindings())
+  {
+    for (std::pair<std::string, Binding*> b : _bindings)
+    {
+      if (b_id == b.first)
+      {
+        _bindings.erase(b.first);
+        delete b.second;
+        break;
+      }
+    }
+  }
+
+  for (std::pair<std::string, Subscription*> s : po->update_subscriptions())
+  {
+    for (std::pair<std::string, Subscription*> s2 : _subscriptions)
+    {
+      if (s.first == s2.first)
+      {
+        _subscriptions.erase(s2.first);
+        delete s2.second;
+        break;
+      }
+    }
+
+    Subscription* copy_s = new Subscription(*(s.second));
+    _subscriptions.insert(std::make_pair(s.first, copy_s));
+  }
+
+  for (std::string s_id : po->remove_subscriptions())
+  {
+    for (std::pair<std::string, Subscription*> s : _subscriptions)
+    {
+      if (s_id == s.first)
+      {
+        _subscriptions.erase(s.first);
+        delete s.second;
+        break;
+      }
+    }
+  }
+
+  //if (po->_associated_uris != NULL)
+  //{
+  //  delete _associated_uris;
+  //  _associated_uris = po->_associated_uris;
+  //}
+
+  if (po->increment_cseq())
+  {
+    _notify_cseq++;
+  }
+
+  if ((po->minimum_cseq() != 0) && (_notify_cseq < po->minimum_cseq()))
+  {
+    _notify_cseq = po->minimum_cseq();
+  }
+}
+
+// TODO assouris?
+PatchObject::PatchObject() :
+  _update_bindings({}),
+  _remove_bindings({}),
+  _update_subscriptions({}),
+  _remove_subscriptions({}),
+  _minimum_cseq(0),
+  _increment_cseq(false)
+{}
+
+PatchObject::~PatchObject()
+{
+  for (std::pair<std::string, Binding*> b : _update_bindings)
+  {
+    delete b.second; b.second = NULL;
+  }
+
+  for (std::pair<std::string, Subscription*> s : _update_subscriptions)
+  {
+    delete s.second; s.second = NULL;
+  }
 }

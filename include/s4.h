@@ -20,6 +20,8 @@
 #include <stdlib.h>
 
 #include "sas.h"
+#include "analyticslogger.h"
+#include "associated_uris.h"
 #include "astaire_aor_store.h"
 #include "httpclient.h"
 
@@ -38,16 +40,25 @@ public:
 
   HTTPCode handle_get(std::string aor_id,
                       AoR** aor,
+                      uint64_t& version,
                       SAS::TrailId trail);
-  HTTPCode handle_delete(std::string aor_id,
+
+  HTTPCode handle_local_delete(std::string aor_id,
+                               uint64_t cas,
+                               SAS::TrailId trail);
+  HTTPCode handle_remote_delete(std::string aor_id,
                          SAS::TrailId trail);
+
   HTTPCode handle_put(std::string aor_id,
                       AoR* aor,
                       SAS::TrailId id);
+
   HTTPCode handle_patch(std::string aor_id,
-                        PatchObject* patch_object,
+                        PatchObject* po,
+                        AoR** aor,
                         SAS::TrailId trail);
 
+  std::string get_id() { return _id; }
 private:
   void replicate_delete_cross_site(std::string aor_id,
                                    SAS::TrailId trail);
@@ -57,6 +68,13 @@ private:
   void replicate_put_cross_site(std::string aor_id,
                                 AoR* aor,
                                 SAS::TrailId trail);
+
+  Store::Status get_aor(const std::string& aor_id,
+                        AoR** aor,
+                        SAS::TrailId trail);
+  Store::Status write_aor(const std::string& aor_id,
+                          AoR* aor,
+                          SAS::TrailId trail);
 
   std::string _id;
   AoRStore* _aor_store;
