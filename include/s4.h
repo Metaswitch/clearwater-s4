@@ -38,25 +38,23 @@ public:
   /// Destructor.
   virtual ~S4();
 
-  HTTPCode handle_get(std::string aor_id,
-                      AoR** aor,
-                      uint64_t& version,
-                      SAS::TrailId trail);
+  virtual HTTPCode handle_get(std::string aor_id,
+                              AoR** aor,
+                              uint64_t& version,
+                              SAS::TrailId trail);
+  virtual HTTPCode handle_local_delete(std::string aor_id,
+                                       uint64_t cas,
+                                       SAS::TrailId trail);
+  virtual HTTPCode handle_remote_delete(std::string aor_id,
+                                        SAS::TrailId trail);
+  virtual HTTPCode handle_put(std::string aor_id,
+                              AoR* aor,
+                              SAS::TrailId id);
 
-  HTTPCode handle_local_delete(std::string aor_id,
-                               uint64_t cas,
-                               SAS::TrailId trail);
-  HTTPCode handle_remote_delete(std::string aor_id,
-                         SAS::TrailId trail);
-
-  HTTPCode handle_put(std::string aor_id,
-                      AoR* aor,
-                      SAS::TrailId id);
-
-  HTTPCode handle_patch(std::string aor_id,
-                        PatchObject* po,
-                        AoR** aor,
-                        SAS::TrailId trail);
+  virtual HTTPCode handle_patch(std::string aor_id,
+                                PatchObject* po,
+                                AoR** aor,
+                                SAS::TrailId trail);
 
   std::string get_id() { return _id; }
 private:
