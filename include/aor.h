@@ -116,6 +116,11 @@ public:
   void from_json(const rapidjson::Value& b_obj);
 };
 
+/// Typedef the map Bindings and the pair BindingPair. First is sometimes the
+/// contact URI, but not always. Second is a pointer to a Binding.
+typedef std::map<std::string, Binding*> Bindings;
+typedef std::pair<std::string, Binding*> BindingPair;
+
 /// @class Subscription
 ///
 /// Represents a subscription to registration events for the AoR.
@@ -171,6 +176,12 @@ public:
   void from_json(const rapidjson::Value& s_obj);
 };
 
+/// Typedef the map Subscriptions and the pair SubscriptionPair. First is
+/// sometimes the To tag, but not always. Second is a pointer to a
+/// Subscription.
+typedef std::map<std::string, Subscription*> Subscriptions;
+typedef std::pair<std::string, Subscription*> SubscriptionPair;
+
 // SDM-REFACTOR-TODO: prototype
 class PatchObject
 {
@@ -181,26 +192,26 @@ public:
   /// Destructor
   ~PatchObject();
 
-  inline std::map<std::string, Binding*> update_bindings() { return _update_bindings; }
+  inline Bindings update_bindings() { return _update_bindings; }
   inline std::vector<std::string> remove_bindings() { return _remove_bindings; }
-  inline std::map<std::string, Subscription*> update_subscriptions() { return _update_subscriptions; }
+  inline Subscriptions update_subscriptions() { return _update_subscriptions; }
   inline std::vector<std::string> remove_subscriptions() { return _remove_subscriptions; }
   inline AssociatedURIs associated_uris() { return _associated_uris; }
   inline int minimum_cseq() { return _minimum_cseq; }
   inline bool increment_cseq() { return _increment_cseq; }
 
-  inline void set_update_bindings(std::map<std::string, Binding*> bindings) { _update_bindings = bindings; }
+  inline void set_update_bindings(Bindings bindings) { _update_bindings = bindings; }
   inline void set_remove_bindings(std::vector<std::string> bindings) { _remove_bindings = bindings; }
-  inline void set_update_subscriptions(std::map<std::string, Subscription*> subscriptions) { _update_subscriptions = subscriptions; }
+  inline void set_update_subscriptions(Subscriptions subscriptions) { _update_subscriptions = subscriptions; }
   inline void set_remove_subscriptions(std::vector<std::string> subscriptions) { _remove_subscriptions = subscriptions; }
   inline void set_associated_uris(AssociatedURIs associated_uris) { _associated_uris = associated_uris; }
   inline void set_minimum_cseq(int minimum) { _minimum_cseq = minimum; }
   inline void set_increment_cseq(bool increment) { _increment_cseq = increment; }
 
 private:
-  std::map<std::string, Binding*> _update_bindings;
+  Bindings _update_bindings;
   std::vector<std::string> _remove_bindings;
-  std::map<std::string, Subscription*> _update_subscriptions;
+  Subscriptions _update_subscriptions;
   std::vector<std::string> _remove_subscriptions;
   AssociatedURIs _associated_uris;
   int _minimum_cseq;
@@ -248,13 +259,6 @@ public:
 
   // Remove the bindings from an AOR object
   void clear_bindings();
-
-  /// Binding ID -> Binding.  First is sometimes the contact URI, but not always.
-  /// Second is a pointer to an object owned by this object.
-  typedef std::map<std::string, Binding*> Bindings;
-
-  /// To tag -> Subscription.
-  typedef std::map<std::string, Subscription*> Subscriptions;
 
   /// Retrieve all the bindings.
   inline const Bindings& bindings() const { return _bindings; }
@@ -369,10 +373,10 @@ public:
 
   /// Utility functions to compare Bindings and Subscriptions in the original AoR
   /// and current AoR, and return the set of those created/updated or removed.
-  AoR::Bindings get_updated_bindings();
-  AoR::Subscriptions get_updated_subscriptions();
-  AoR::Bindings get_removed_bindings();
-  AoR::Subscriptions get_removed_subscriptions();
+  Bindings get_updated_bindings();
+  Subscriptions get_updated_subscriptions();
+  Bindings get_removed_bindings();
+  Subscriptions get_removed_subscriptions();
 
 private:
   AoR* _orig_aor;
