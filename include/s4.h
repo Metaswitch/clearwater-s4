@@ -23,14 +23,70 @@
 #include "associated_uris.h"
 #include "astaire_aor_store.h"
 #include "httpclient.h"
+#include "chronosconnection.h"
 
 class S4
 {
 public:
-  /// S4 constructor.
+  /// @class S4::ChronosTimerRequestSender
   ///
-  /// @param aor_store          - Pointer to the underlying data store interface
+  /// Class responsible for sending any requests to Chronos about
+  /// registration/subscription expiry
+  ///
+  /// @param chronos_conn    The underlying chronos connection
+  class ChronosTimerRequestSender
+  {
+  public:
+    ChronosTimerRequestSender(ChronosConnection* chronos_conn);
+
+    virtual ~ChronosTimerRequestSender();
+
+    /// Create and send any appropriate Chronos requests
+    ///
+    /// @param aor_id       The AoR ID
+    /// @param aor_pair     The AoR pair to send Chronos requests for
+    /// @param now          The current time
+    /// @param trail        SAS trail
+    virtual void send_timers(const std::string& aor_id,
+                             AoR* aor,
+                             int now,
+                             SAS::TrailId trail);
+
+    /// S4 is the only class that can use ChronosTimerRequestSender
+    friend class S4;
+
+  private:
+    ChronosConnection* _chronos_conn;
+
+    /// Build the tag info map from an AoR
+    virtual void build_tag_info(AoR* aor,
+                                std::map<std::string, uint32_t>& tag_map);
+
+    /// Create the Chronos Timer request
+    ///
+    /// @param aor_id       The AoR ID
+    /// @param timer_id     The Timer ID
+    /// @param expiry       Timer length
+    /// @param tags         Any tags to add to the Chronos timer
+    /// @param trail        SAS trail
+    virtual void set_timer(const std::string& aor_id,
+                           std::string& timer_id,
+                           int expiry,
+                           std::map<std::string, uint32_t> tags,
+                           SAS::TrailId trail);
+  };
+
+  /**
+   * @brief S4 constructor
+   *
+   * @param id
+   * @param chronos_connection - Chronos connection used to set timers for
+   *                             expiring registrations and subscriptions.
+   * @param aor_store         - Pointer to the underlying data store interface
+   * @param remote_s4s        - vector of pointer to remote S4 stores
+   */
   S4(std::string id,
+     ChronosConnection* chronos_connection,
      AoRStore* aor_store,
      std::vector<S4*> remote_s4s);
 
@@ -74,6 +130,7 @@ private:
                           SAS::TrailId trail);
 
   std::string _id;
+  ChronosTimerRequestSender* _chronos_timer_request_sender;
   AoRStore* _aor_store;
   std::vector<S4*> _remote_s4s;
 };
