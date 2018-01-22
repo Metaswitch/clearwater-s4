@@ -442,13 +442,14 @@ Store::Status S4::write_aor(const std::string& aor_id,
 {
   int next_expires;
   int last_expires;
+  int now = time(NULL);
   aor->get_next_and_last_expires(next_expires, last_expires);
 
-  TRC_DEBUG("Expires are %d, %d", next_expires, last_expires);
+  TRC_DEBUG("Expires are %d, %d: Now is %d", next_expires, last_expires, now);
   // SDM-REFACTOR-TODO: Set Chronos timer.
 
   return _aor_store->set_aor_data(aor_id,
                                   aor,
-                                  last_expires,
+                                  last_expires + 10,
                                   trail);
 }
