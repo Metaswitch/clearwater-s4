@@ -266,7 +266,7 @@ std::string AstaireAoRStore::JsonSerializerDeserializer::serialize_aor(AoR* aor_
     writer.String(JSON_BINDINGS);
     writer.StartObject();
     {
-      for (AoR::Bindings::const_iterator it = aor_data->bindings().begin();
+      for (Bindings::const_iterator it = aor_data->bindings().begin();
            it != aor_data->bindings().end();
            ++it)
       {
@@ -282,7 +282,7 @@ std::string AstaireAoRStore::JsonSerializerDeserializer::serialize_aor(AoR* aor_
     writer.String(JSON_SUBSCRIPTIONS);
     writer.StartObject();
     {
-      for (AoR::Subscriptions::const_iterator it = aor_data->subscriptions().begin();
+      for (Subscriptions::const_iterator it = aor_data->subscriptions().begin();
            it != aor_data->subscriptions().end();
            ++it)
       {

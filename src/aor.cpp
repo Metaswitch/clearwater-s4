@@ -122,7 +122,7 @@ void AoR::clear(bool clear_emergency_bindings)
 Binding* AoR::get_binding(const std::string& binding_id)
 {
   Binding* b;
-  AoR::Bindings::const_iterator i = _bindings.find(binding_id);
+  Bindings::const_iterator i = _bindings.find(binding_id);
   if (i != _bindings.end())
   {
     b = i->second;
@@ -142,7 +142,7 @@ Binding* AoR::get_binding(const std::string& binding_id)
 /// does nothing.
 void AoR::remove_binding(const std::string& binding_id)
 {
-  AoR::Bindings::iterator i = _bindings.find(binding_id);
+  Bindings::iterator i = _bindings.find(binding_id);
   if (i != _bindings.end())
   {
     delete i->second;
@@ -155,7 +155,7 @@ void AoR::remove_binding(const std::string& binding_id)
 Subscription* AoR::get_subscription(const std::string& to_tag)
 {
   Subscription* s;
-  AoR::Subscriptions::const_iterator i = _subscriptions.find(to_tag);
+  Subscriptions::const_iterator i = _subscriptions.find(to_tag);
   if (i != _subscriptions.end())
   {
     s = i->second;
@@ -174,7 +174,7 @@ Subscription* AoR::get_subscription(const std::string& to_tag)
 /// subscription, does nothing.
 void AoR::remove_subscription(const std::string& to_tag)
 {
-  AoR::Subscriptions::iterator i = _subscriptions.find(to_tag);
+  Subscriptions::iterator i = _subscriptions.find(to_tag);
   if (i != _subscriptions.end())
   {
     delete i->second;
@@ -358,37 +358,28 @@ void Subscription::from_json(const rapidjson::Value& s_obj)
   JSON_GET_INT_MEMBER(s_obj, JSON_EXPIRES, _expires);
 }
 
-void AoR::get_next_and_last_expires(int& next_expires, int& last_expires)
+int AoR::get_last_expires() const
 {
-  // Set a temp int to INT_MAX to compare expiry times to.
-  next_expires = INT_MAX;
-  last_expires = 0;
+  // Set a temp int to 0 to compare expiry times to.
+  int last_expires = 0;
 
-  for (std::pair<std::string, Binding*> b : _bindings)
+  for (BindingPair b : _bindings)
   {
-    if (b.second->_expires < next_expires)
-    {
-      next_expires = b.second->_expires;
-    }
-
     if (b.second->_expires > last_expires)
     {
       last_expires = b.second->_expires;
     }
   }
 
-  for (std::pair<std::string, Subscription*> s : _subscriptions)
+  for (SubscriptionPair s : _subscriptions)
   {
-    if (s.second->_expires < next_expires)
-    {
-      next_expires = s.second->_expires;
-    }
-
     if (s.second->_expires > last_expires)
     {
       last_expires = s.second->_expires;
     }
   }
+
+  return last_expires;
 }
 
 // Utility function to return the expiry time of the binding or subscription due
@@ -400,7 +391,7 @@ int AoR::get_next_expires()
   // Set a temp int to INT_MAX to compare expiry times to.
   int _next_expires = INT_MAX;
 
-  for (AoR::Bindings::const_iterator b = _bindings.begin();
+  for (Bindings::const_iterator b = _bindings.begin();
        b != _bindings.end();
        ++b)
   {
@@ -409,7 +400,7 @@ int AoR::get_next_expires()
       _next_expires = b->second->_expires;
     }
   }
-  for (AoR::Subscriptions::const_iterator s = _subscriptions.begin();
+  for (Subscriptions::const_iterator s = _subscriptions.begin();
        s != _subscriptions.end();
        ++s)
   {
@@ -456,20 +447,19 @@ void AoR::copy_aor(AoR* source_aor)
   _scscf_uri = source_aor->_scscf_uri;
 }
 
-AoR::Bindings AoRPair::get_updated_bindings()
+Bindings AoRPair::get_updated_bindings()
 {
-  AoR::Bindings updated_bindings;
+  Bindings updated_bindings;
 
   // Iterate over the bindings in the current AoR. Figure out if the bindings
   // have been created or updated.
-  for (std::pair<std::string, Binding*> current_aor_binding :
-         _current_aor->bindings())
+  for (BindingPair current_aor_binding : _current_aor->bindings())
   {
     std::string b_id = current_aor_binding.first;
     Binding* binding = current_aor_binding.second;
 
     // Find any binding match in the original AoR
-    AoR::Bindings::const_iterator orig_aor_binding_match =
+    Bindings::const_iterator orig_aor_binding_match =
       _orig_aor->bindings().find(b_id);
 
     // If the binding is only in the current AoR, it has been created
@@ -495,20 +485,19 @@ AoR::Bindings AoRPair::get_updated_bindings()
   return updated_bindings;
 }
 
-AoR::Subscriptions AoRPair::get_updated_subscriptions()
+Subscriptions AoRPair::get_updated_subscriptions()
 {
-  AoR::Subscriptions updated_subscriptions;
+  Subscriptions updated_subscriptions;
 
   // Iterate over the subscriptions in the current AoR. Figure out if the
   // subscriptions have been created or updated.
-  for (std::pair<std::string, Subscription*> current_aor_subscription :
-         _current_aor->subscriptions())
+  for (SubscriptionPair current_aor_subscription : _current_aor->subscriptions())
   {
     std::string s_id = current_aor_subscription.first;
     Subscription* subscription = current_aor_subscription.second;
 
     // Find any subscriptions match in the original AoR
-    AoR::Subscriptions::const_iterator orig_aor_subscription_match =
+    Subscriptions::const_iterator orig_aor_subscription_match =
       _orig_aor->subscriptions().find(s_id);
 
     // If the subscription is only in the current AoR, it has been created
@@ -535,13 +524,12 @@ AoR::Subscriptions AoRPair::get_updated_subscriptions()
   return updated_subscriptions;
 }
 
-AoR::Bindings AoRPair::get_removed_bindings()
+Bindings AoRPair::get_removed_bindings()
 {
-  AoR::Bindings removed_bindings;
+  Bindings removed_bindings;
 
   // Iterate over original bindings and record those not in current AoR
-  for (std::pair<std::string, Binding*> orig_aor_binding :
-         _orig_aor->bindings())
+  for (BindingPair orig_aor_binding : _orig_aor->bindings())
   {
     if (_current_aor->bindings().find(orig_aor_binding.first) ==
         _current_aor->bindings().end())
@@ -556,13 +544,12 @@ AoR::Bindings AoRPair::get_removed_bindings()
   return removed_bindings;
 }
 
-AoR::Subscriptions AoRPair::get_removed_subscriptions()
+Subscriptions AoRPair::get_removed_subscriptions()
 {
-  AoR::Subscriptions removed_subscriptions;
+  Subscriptions removed_subscriptions;
 
   // Iterate over original subscriptions and record those not in current AoR
-  for (std::pair<std::string, Subscription*> orig_aor_subscription :
-         _orig_aor->subscriptions())
+  for (SubscriptionPair orig_aor_subscription : _orig_aor->subscriptions())
   {
     // Is this subscription present in the new AoR?
     if (_current_aor->subscriptions().find(orig_aor_subscription.first) ==
@@ -578,11 +565,11 @@ AoR::Subscriptions AoRPair::get_removed_subscriptions()
   return removed_subscriptions;
 }
 
-void AoR::patch_aor(PatchObject* po)
+void AoR::patch_aor(const PatchObject& po)
 {
-  for (std::pair<std::string, Binding*> b : po->update_bindings())
+  for (BindingPair b : po.get_update_bindings())
   {
-    for (std::pair<std::string, Binding*> b2 : _bindings)
+    for (BindingPair b2 : _bindings)
     {
       if (b.first == b2.first)
       {
@@ -596,9 +583,9 @@ void AoR::patch_aor(PatchObject* po)
     _bindings.insert(std::make_pair(b.first, copy_b));
   }
 
-  for (std::string b_id : po->remove_bindings())
+  for (std::string b_id : po.get_remove_bindings())
   {
-    for (std::pair<std::string, Binding*> b : _bindings)
+    for (BindingPair b : _bindings)
     {
       if (b_id == b.first)
       {
@@ -609,9 +596,9 @@ void AoR::patch_aor(PatchObject* po)
     }
   }
 
-  for (std::pair<std::string, Subscription*> s : po->update_subscriptions())
+  for (SubscriptionPair s : po.get_update_subscriptions())
   {
-    for (std::pair<std::string, Subscription*> s2 : _subscriptions)
+    for (SubscriptionPair s2 : _subscriptions)
     {
       if (s.first == s2.first)
       {
@@ -625,9 +612,9 @@ void AoR::patch_aor(PatchObject* po)
     _subscriptions.insert(std::make_pair(s.first, copy_s));
   }
 
-  for (std::string s_id : po->remove_subscriptions())
+  for (std::string s_id : po.get_remove_subscriptions())
   {
-    for (std::pair<std::string, Subscription*> s : _subscriptions)
+    for (SubscriptionPair s : _subscriptions)
     {
       if (s_id == s.first)
       {
@@ -644,14 +631,14 @@ void AoR::patch_aor(PatchObject* po)
   //  _associated_uris = po->_associated_uris;
   //}
 
-  if (po->increment_cseq())
+  if (po.get_increment_cseq())
   {
     _notify_cseq++;
   }
 
-  if ((po->minimum_cseq() != 0) && (_notify_cseq < po->minimum_cseq()))
+  if ((po.get_minimum_cseq() != 0) && (_notify_cseq < po.get_minimum_cseq()))
   {
-    _notify_cseq = po->minimum_cseq();
+    _notify_cseq = po.get_minimum_cseq();
   }
 }
 
@@ -667,12 +654,64 @@ PatchObject::PatchObject() :
 
 PatchObject::~PatchObject()
 {
-  for (std::pair<std::string, Binding*> b : _update_bindings)
+  clear();
+}
+
+/// Copy constructor.
+PatchObject::PatchObject(const PatchObject& other)
+{
+  common_constructor(other);
+}
+
+// Make sure assignment is deep!
+PatchObject& PatchObject::operator= (PatchObject const& other)
+{
+  if (this != &other)
+  {
+    clear();
+    common_constructor(other);
+  }
+
+  return *this;
+}
+
+void PatchObject::common_constructor(const PatchObject& other)
+{
+  for (BindingPair binding : other.get_update_bindings())
+  {
+    _update_bindings.insert(
+                 std::make_pair(binding.first, new Binding(*(binding.second))));
+  }
+
+  for (std::string binding : other.get_remove_bindings())
+  {
+    _remove_bindings.push_back(binding);
+  }
+
+  for (SubscriptionPair subscription : other.get_update_subscriptions())
+  {
+    _update_subscriptions.insert(
+                      std::make_pair(subscription.first,
+                                     new Subscription(*(subscription.second))));
+  }
+
+  for (std::string subscription : other.get_remove_subscriptions())
+  {
+    _remove_subscriptions.push_back(subscription);
+  }
+
+  _minimum_cseq = other.get_minimum_cseq();
+  _increment_cseq = other.get_increment_cseq();
+}
+
+void PatchObject::clear()
+{
+  for (BindingPair b : _update_bindings)
   {
     delete b.second; b.second = NULL;
   }
 
-  for (std::pair<std::string, Subscription*> s : _update_subscriptions)
+  for (SubscriptionPair s : _update_subscriptions)
   {
     delete s.second; s.second = NULL;
   }
