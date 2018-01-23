@@ -204,9 +204,9 @@ public:
   inline const int get_minimum_cseq() const { return _minimum_cseq; }
   inline const bool get_increment_cseq() const { return _increment_cseq; }
 
-  inline void set_update_bindings(std::map<std::string, Binding*> bindings) { _update_bindings = bindings; }
+  inline void set_update_bindings(Bindings bindings) { _update_bindings = bindings; }
   inline void set_remove_bindings(std::vector<std::string> bindings) { _remove_bindings = bindings; }
-  inline void set_update_subscriptions(std::map<std::string, Subscription*> subscriptions) { _update_subscriptions = subscriptions; }
+  inline void set_update_subscriptions(Subscriptions subscriptions) { _update_subscriptions = subscriptions; }
   inline void set_remove_subscriptions(std::vector<std::string> subscriptions) { _remove_subscriptions = subscriptions; }
   inline void set_associated_uris(AssociatedURIs associated_uris) { _associated_uris = associated_uris; }
   inline void set_minimum_cseq(int minimum) { _minimum_cseq = minimum; }
@@ -269,13 +269,6 @@ public:
 
   // Remove the bindings from an AOR object
   void clear_bindings();
-
-  /// Binding ID -> Binding.  First is sometimes the contact URI, but not always.
-  /// Second is a pointer to an object owned by this object.
-  typedef std::map<std::string, Binding*> Bindings;
-
-  /// To tag -> Subscription.
-  typedef std::map<std::string, Subscription*> Subscriptions;
 
   /// Retrieve all the bindings.
   inline const Bindings& bindings() const { return _bindings; }
