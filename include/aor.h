@@ -192,13 +192,17 @@ public:
   /// Destructor
   ~PatchObject();
 
-  inline Bindings update_bindings() { return _update_bindings; }
-  inline std::vector<std::string> remove_bindings() { return _remove_bindings; }
-  inline Subscriptions update_subscriptions() { return _update_subscriptions; }
-  inline std::vector<std::string> remove_subscriptions() { return _remove_subscriptions; }
-  inline AssociatedURIs associated_uris() { return _associated_uris; }
-  inline int minimum_cseq() { return _minimum_cseq; }
-  inline bool increment_cseq() { return _increment_cseq; }
+  /// Make sure copy is deep!
+  PatchObject(const PatchObject& other);
+  PatchObject& operator= (PatchObject const& other);
+
+  inline const Bindings get_update_bindings() const { return _update_bindings; }
+  inline const std::vector<std::string> get_remove_bindings() const { return _remove_bindings; }
+  inline const Subscriptions get_update_subscriptions() const { return _update_subscriptions; }
+  inline const std::vector<std::string> get_remove_subscriptions() const { return _remove_subscriptions; }
+  inline const AssociatedURIs get_associated_uris() const { return _associated_uris; }
+  inline const int get_minimum_cseq() const { return _minimum_cseq; }
+  inline const bool get_increment_cseq() const { return _increment_cseq; }
 
   inline void set_update_bindings(Bindings bindings) { _update_bindings = bindings; }
   inline void set_remove_bindings(std::vector<std::string> bindings) { _remove_bindings = bindings; }
@@ -209,6 +213,12 @@ public:
   inline void set_increment_cseq(bool increment) { _increment_cseq = increment; }
 
 private:
+  // Common code between copy and assignment
+  void common_constructor(const PatchObject& other);
+
+  /// Clear all the bindings and subscriptions from this object.
+  void clear();
+
   Bindings _update_bindings;
   std::vector<std::string> _remove_bindings;
   Subscriptions _update_subscriptions;
@@ -275,6 +285,18 @@ public:
   // Return the expiry time of the binding or subscription due to expire next.
   int get_next_expires();
 
+  /// get_last_expires
+  ///
+  /// This returns the expiry time of the binding or subscription due to expire
+  /// last.
+  /// The expiry time is relative, so if this was called on an AoR containing a
+  /// single binding due to expire in 1 minute it would return 60.
+  /// This can be called on a empty AoR, where it will return 0.
+  ///
+  /// @return Return the expiry time of the binding or subscription due to
+  ///         expire last.
+  int get_last_expires() const;
+
   /// Copy all site agnostic values from one AoR to this AoR. This copies basically
   /// everything, but importantly not the CAS. It doesn't remove any bindings
   /// or subscriptions that may have been in the existing AoR but not in the copied
@@ -284,9 +306,7 @@ public:
   void copy_aor(AoR* source_aor);
 
   // SDM-REFACTOR-TODO: Implement/comment/test
-  void get_next_and_last_expires(int& next_expires, int& last_expires);
-  void patch_aor(PatchObject* po);
-
+  void patch_aor(const PatchObject& po);
   void convert_aor_to_patch(PatchObject* po) {};
   void convert_patch_to_aor(PatchObject* po) {};
 

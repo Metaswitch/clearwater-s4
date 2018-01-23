@@ -13,7 +13,7 @@
 #include "mock_s4.h"
 
 MockS4::MockS4():
-  S4("", NULL, std::vector<S4*>())
+  S4("mock_id", "mock_callback", NULL, std::vector<S4*>())
 {}
 
 MockS4::~MockS4()

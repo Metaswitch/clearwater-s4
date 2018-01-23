@@ -21,24 +21,21 @@ class MockS4 : public S4
   MockS4();
   virtual ~MockS4();
 
-  MOCK_METHOD4(handle_get, HTTPCode(std::string aor_id,
+  MOCK_METHOD4(handle_get, HTTPCode(const std::string& id,
                                     AoR** aor,
                                     uint64_t& version,
                                     SAS::TrailId trail));
 
-  MOCK_METHOD3(handle_local_delete, HTTPCode(std::string aor_id,
-                                             uint64_t cas,
-                                             SAS::TrailId trail));
+  MOCK_METHOD3(handle_delete, HTTPCode(const std::string& id,
+                                       uint64_t version,
+                                       SAS::TrailId trail));
 
-  MOCK_METHOD2(handle_remote_delete, HTTPCode(std::string aor_id,
-                                              SAS::TrailId trail));
+  MOCK_METHOD3(handle_put, HTTPCode(const std::string& id,
+                                    const AoR& aor,
+                                    SAS::TrailId trail));
 
-  MOCK_METHOD3(handle_put, HTTPCode(std::string aor_id,
-                                    AoR* aor,
-                                    SAS::TrailId id));
-
-  MOCK_METHOD4(handle_patch, HTTPCode(std::string aor_id,
-                                      PatchObject* patch_object,
+  MOCK_METHOD4(handle_patch, HTTPCode(const std::string& id,
+                                      const PatchObject& patch_object,
                                       AoR** aor,
                                       SAS::TrailId trail));
 };
