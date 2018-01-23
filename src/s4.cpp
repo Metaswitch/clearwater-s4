@@ -40,16 +40,17 @@ S4::S4(std::string id,
        AoRStore* aor_store,
        std::vector<S4*> remote_s4s) :
   _id(id),
+  _chronos_timer_request_sender(new ChronosTimerRequestSender(chronos_connection)),
   _chronos_callback_uri(callback_uri),
   _aor_store(aor_store),
   _remote_s4s(remote_s4s)
 {
-  _chronos_timer_request_sender = new ChronosTimerRequestSender(chronos_connection);
 }
 
 S4::S4(std::string id,
        AoRStore* aor_store) :
   _id(id),
+  _chronos_timer_request_sender(NULL),
   _chronos_callback_uri(""),
   _aor_store(aor_store),
   _remote_s4s({})
@@ -497,7 +498,7 @@ Store::Status S4::write_aor(const std::string& id,
   int now = time(NULL);
 
   // Send any Chronos timer requests
-  if (_chronos_timer_request_sender->_chronos_conn)
+  if (_chronos_timer_request_sender)
   {
     _chronos_timer_request_sender->send_timers(id, &aor, now, trail);
   }
@@ -564,10 +565,14 @@ void S4::ChronosTimerRequestSender::send_timers(const std::string& aor_id,
 
   if (next_expires == 0)
   {
+    // LCOV_EXCL_START - No UTs for unhittable code
+
     // This should never happen, as an empty AoR should never reach
     // get_next_expires
     TRC_DEBUG("get_next_expires returned 0. The expiry of AoR members "
               "is corrupt, or an empty (invalid) AoR was passed in.");
+
+    // LCOV_EXCL_END
   }
 
   // Set the expiry time to be relative to now.
