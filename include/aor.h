@@ -52,7 +52,7 @@ static const char* const JSON_SCSCF_URI = "scscf-uri";
 class Binding
 {
 public:
-  Binding(std::string address_of_record): _address_of_record(address_of_record) {};
+  Binding(std::string address_of_record);
 
   /// The address of record, e.g. "sip:name@example.com".
   std::string _address_of_record;
@@ -127,7 +127,7 @@ typedef std::pair<std::string, Binding*> BindingPair;
 class Subscription
 {
 public:
-  Subscription(): _refreshed(false) {};
+  Subscription(): _refreshed(false), _expires(0) {};
 
   /// The Contact URI for the subscription dialog (used as the Request URI
   /// of the NOTIFY)
