@@ -358,19 +358,13 @@ void Subscription::from_json(const rapidjson::Value& s_obj)
   JSON_GET_INT_MEMBER(s_obj, JSON_EXPIRES, _expires);
 }
 
-void AoR::get_next_and_last_expires(int& next_expires, int& last_expires)
+int AoR::get_last_expires() const
 {
-  // Set a temp int to INT_MAX to compare expiry times to.
-  next_expires = INT_MAX;
-  last_expires = 0;
+  // Set a temp int to 0 to compare expiry times to.
+  int last_expires = 0;
 
   for (BindingPair b : _bindings)
   {
-    if (b.second->_expires < next_expires)
-    {
-      next_expires = b.second->_expires;
-    }
-
     if (b.second->_expires > last_expires)
     {
       last_expires = b.second->_expires;
@@ -379,16 +373,13 @@ void AoR::get_next_and_last_expires(int& next_expires, int& last_expires)
 
   for (SubscriptionPair s : _subscriptions)
   {
-    if (s.second->_expires < next_expires)
-    {
-      next_expires = s.second->_expires;
-    }
-
     if (s.second->_expires > last_expires)
     {
       last_expires = s.second->_expires;
     }
   }
+
+  return last_expires;
 }
 
 // Utility function to return the expiry time of the binding or subscription due
@@ -558,7 +549,7 @@ Subscriptions AoRPair::get_removed_subscriptions()
   Subscriptions removed_subscriptions;
 
   // Iterate over original subscriptions and record those not in current AoR
-  for (SubscriptionPair orig_aor_subscription :_orig_aor->subscriptions())
+  for (SubscriptionPair orig_aor_subscription : _orig_aor->subscriptions())
   {
     // Is this subscription present in the new AoR?
     if (_current_aor->subscriptions().find(orig_aor_subscription.first) ==
@@ -574,9 +565,9 @@ Subscriptions AoRPair::get_removed_subscriptions()
   return removed_subscriptions;
 }
 
-void AoR::patch_aor(PatchObject* po)
+void AoR::patch_aor(const PatchObject& po)
 {
-  for (BindingPair b : po->update_bindings())
+  for (BindingPair b : po.get_update_bindings())
   {
     for (BindingPair b2 : _bindings)
     {
@@ -592,7 +583,7 @@ void AoR::patch_aor(PatchObject* po)
     _bindings.insert(std::make_pair(b.first, copy_b));
   }
 
-  for (std::string b_id : po->remove_bindings())
+  for (std::string b_id : po.get_remove_bindings())
   {
     for (BindingPair b : _bindings)
     {
@@ -605,7 +596,7 @@ void AoR::patch_aor(PatchObject* po)
     }
   }
 
-  for (SubscriptionPair s : po->update_subscriptions())
+  for (SubscriptionPair s : po.get_update_subscriptions())
   {
     for (SubscriptionPair s2 : _subscriptions)
     {
@@ -621,7 +612,7 @@ void AoR::patch_aor(PatchObject* po)
     _subscriptions.insert(std::make_pair(s.first, copy_s));
   }
 
-  for (std::string s_id : po->remove_subscriptions())
+  for (std::string s_id : po.get_remove_subscriptions())
   {
     for (SubscriptionPair s : _subscriptions)
     {
@@ -640,14 +631,14 @@ void AoR::patch_aor(PatchObject* po)
   //  _associated_uris = po->_associated_uris;
   //}
 
-  if (po->increment_cseq())
+  if (po.get_increment_cseq())
   {
     _notify_cseq++;
   }
 
-  if ((po->minimum_cseq() != 0) && (_notify_cseq < po->minimum_cseq()))
+  if ((po.get_minimum_cseq() != 0) && (_notify_cseq < po.get_minimum_cseq()))
   {
-    _notify_cseq = po->minimum_cseq();
+    _notify_cseq = po.get_minimum_cseq();
   }
 }
 
@@ -662,6 +653,58 @@ PatchObject::PatchObject() :
 {}
 
 PatchObject::~PatchObject()
+{
+  clear();
+}
+
+/// Copy constructor.
+PatchObject::PatchObject(const PatchObject& other)
+{
+  common_constructor(other);
+}
+
+// Make sure assignment is deep!
+PatchObject& PatchObject::operator= (PatchObject const& other)
+{
+  if (this != &other)
+  {
+    clear();
+    common_constructor(other);
+  }
+
+  return *this;
+}
+
+void PatchObject::common_constructor(const PatchObject& other)
+{
+  for (BindingPair binding : other.get_update_bindings())
+  {
+    _update_bindings.insert(
+                 std::make_pair(binding.first, new Binding(*(binding.second))));
+  }
+
+  for (std::string binding : other.get_remove_bindings())
+  {
+    _remove_bindings.push_back(binding);
+  }
+
+  for (SubscriptionPair subscription : other.get_update_subscriptions())
+  {
+    _update_subscriptions.insert(
+                      std::make_pair(subscription.first,
+                                     new Subscription(*(subscription.second))));
+  }
+
+  for (std::string subscription : other.get_remove_subscriptions())
+  {
+    _remove_subscriptions.push_back(subscription);
+  }
+
+  _minimum_cseq = other.get_minimum_cseq();
+  _increment_cseq = other.get_increment_cseq();
+}
+
+void PatchObject::clear()
 {
   for (BindingPair b : _update_bindings)
   {
