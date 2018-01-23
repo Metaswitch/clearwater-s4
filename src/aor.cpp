@@ -197,6 +197,15 @@ void AoR::clear_bindings()
 }
 
 
+Binding::Binding(std::string address_of_record) :
+  _address_of_record(address_of_record),
+  _cseq(0),
+  _expires(0),
+  _priority(0),
+  _emergency_registration(false)
+{}
+
+
 void Binding::
   to_json(rapidjson::Writer<rapidjson::StringBuffer>& writer) const
 {

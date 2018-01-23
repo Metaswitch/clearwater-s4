@@ -29,11 +29,13 @@
 #include "utils.h"
 #include "s4.h"
 #include "astaire_aor_store.h"
+#include "chronosconnection.h"
 
 // SDM-REFACTOR-TODO:
 // 8. Full UT
 
 S4::S4(std::string id,
+       ChronosConnection* chronos_connection,
        std::string callback_uri,
        AoRStore* aor_store,
        std::vector<S4*> remote_s4s) :
@@ -42,6 +44,7 @@ S4::S4(std::string id,
   _aor_store(aor_store),
   _remote_s4s(remote_s4s)
 {
+  _chronos_timer_request_sender = new ChronosTimerRequestSender(chronos_connection);
 }
 
 S4::S4(std::string id,
@@ -55,6 +58,7 @@ S4::S4(std::string id,
 
 S4::~S4()
 {
+  delete _chronos_timer_request_sender;
 }
 
 HTTPCode S4::handle_get(const std::string& id,
@@ -490,6 +494,14 @@ Store::Status S4::write_aor(const std::string& id,
                             AoR& aor,
                             SAS::TrailId trail)
 {
+  int now = time(NULL);
+
+  // Send any Chronos timer requests
+  if (_chronos_timer_request_sender->_chronos_conn)
+  {
+    _chronos_timer_request_sender->send_timers(id, &aor, now, trail);
+  }
+
   Store::Status rc = _aor_store->set_aor_data(id,
                                               &aor,
                                               aor.get_last_expires() + 10,
@@ -506,4 +518,106 @@ Store::Status S4::write_aor(const std::string& id,
   }
 
   return rc;
+}
+
+S4::ChronosTimerRequestSender::
+     ChronosTimerRequestSender(ChronosConnection* chronos_conn) :
+  _chronos_conn(chronos_conn)
+{
+}
+
+S4::ChronosTimerRequestSender::~ChronosTimerRequestSender()
+{
+}
+
+void S4::ChronosTimerRequestSender::build_tag_info (
+                                       AoR* aor,
+                                       std::map<std::string, uint32_t>& tag_map)
+{
+  // Each timer is built to represent a single registration i.e. an AoR.
+  tag_map["REG"] = 1;
+  tag_map["BIND"] = aor->get_bindings_count();
+  tag_map["SUB"] = aor->get_subscriptions_count();
+}
+
+void S4::ChronosTimerRequestSender::send_timers(const std::string& aor_id,
+                                                AoR* aor,
+                                                int now,
+                                                SAS::TrailId trail)
+{
+  std::map<std::string, uint32_t> tags;
+  std::string& timer_id = aor->_timer_id;
+
+  // An AoR with no bindings is invalid, and the timer should be deleted.
+  // We do this before getting next_expires to save on processing.
+  if (aor->get_bindings_count() == 0)
+  {
+    if (timer_id != "")
+    {
+      _chronos_conn->send_delete(timer_id, trail);
+    }
+    return;
+  }
+
+  build_tag_info(aor, tags);
+  int next_expires = aor->get_next_expires();
+
+  if (next_expires == 0)
+  {
+    // This should never happen, as an empty AoR should never reach
+    // get_next_expires
+    TRC_DEBUG("get_next_expires returned 0. The expiry of AoR members "
+              "is corrupt, or an empty (invalid) AoR was passed in.");
+  }
+
+  // Set the expiry time to be relative to now.
+  int expiry = (next_expires > now) ? (next_expires - now) : (now);
+
+  set_timer(aor_id,
+            timer_id,
+            expiry,
+            tags,
+            trail);
+}
+
+void S4::ChronosTimerRequestSender::set_timer(
+                                          const std::string& aor_id,
+                                          std::string& timer_id,
+                                          int expiry,
+                                          std::map<std::string, uint32_t> tags,
+                                          SAS::TrailId trail)
+{
+  std::string temp_timer_id = "";
+  HTTPCode status;
+  std::string opaque = "{\"aor_id\": \"" + aor_id + "\"}";
+  std::string callback_uri = "/timers";
+
+  // If a timer has been previously set for this binding, send a PUT.
+  // Otherwise sent a POST.
+  if (timer_id == "")
+  {
+    status = _chronos_conn->send_post(temp_timer_id,
+                                      expiry,
+                                      callback_uri,
+                                      opaque,
+                                      trail,
+                                      tags);
+  }
+  else
+  {
+    temp_timer_id = timer_id;
+    status = _chronos_conn->send_put(temp_timer_id,
+                                     expiry,
+                                     callback_uri,
+                                     opaque,
+                                     trail,
+                                     tags);
+  }
+
+  // Update the timer id. If the update to Chronos failed, that's OK,
+  // don't reject the request or update the stored timer id.
+  if (status == HTTP_OK)
+  {
+    timer_id = temp_timer_id;
+  }
 }
