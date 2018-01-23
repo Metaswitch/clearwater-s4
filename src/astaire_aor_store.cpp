@@ -144,6 +144,7 @@ Store::Status AstaireAoRStore::Connector::set_aor_data(
   event.add_var_param(aor_id);
   SAS::report_event(event);
 
+  printf("\nsetting\n");
   Store::Status status = _data_store->set_data("reg",
                                                aor_id,
                                                data,

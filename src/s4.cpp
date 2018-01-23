@@ -456,6 +456,7 @@ Store::Status S4::get_aor(const std::string& id,
                           AoR** aor,
                           SAS::TrailId trail)
 {
+  printf("\ngetting\n");
   Store::Status rc;
 
   *aor = _aor_store->get_aor_data(id, trail);
@@ -493,6 +494,7 @@ Store::Status S4::write_aor(const std::string& id,
   // Send any Chronos timer requests
   if (_chronos_timer_request_sender->_chronos_conn && !_remote_s4s.empty())
   {
+    printf("\nsending\n");
     _chronos_timer_request_sender->send_timers(id, &aor, now, trail);
   }
 
@@ -600,7 +602,7 @@ void S4::ChronosTimerRequestSender::set_timer(
   }
   else
   {
-    printf("ID %s", timer_id.c_str());
+    printf("put ID %s", timer_id.c_str());
     temp_timer_id = timer_id;
     status = _chronos_conn->send_put(temp_timer_id,
                                      expiry,
@@ -610,6 +612,7 @@ void S4::ChronosTimerRequestSender::set_timer(
                                      tags);
   }
 
+  printf("\nreturn %ld\n", status);
   // Update the timer id. If the update to Chronos failed, that's OK,
   // don't reject the request or update the stored timer id.
   if (status == HTTP_OK)
