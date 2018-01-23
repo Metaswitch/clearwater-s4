@@ -31,8 +31,6 @@
 #include "astaire_aor_store.h"
 
 // SDM-REFACTOR-TODO:
-// 5. Implement PATCH
-// 6. Implement PATCH/PUT conversion, and protect against loops
 // 8. Full UT
 
 S4::S4(std::string id,
@@ -43,6 +41,15 @@ S4::S4(std::string id,
   _chronos_callback_uri(callback_uri),
   _aor_store(aor_store),
   _remote_s4s(remote_s4s)
+{
+}
+
+S4::S4(std::string id,
+       AoRStore* aor_store) :
+  _id(id),
+  _chronos_callback_uri(""),
+  _aor_store(aor_store),
+  _remote_s4s({})
 {
 }
 
@@ -359,7 +366,7 @@ HTTPCode S4::handle_patch(const std::string& id,
         // Subscriber has been updated on the local site, so send the PATCHs
         // out to the remote sites. The response to the SM is always going to be
         // OK independently of whether any remote PATCHs are successful.
-        replicate_patch_cross_site(id, po, trail);
+        replicate_patch_cross_site(id, po, **aor, trail);
       }
       else if (store_rc == Store::Status::DATA_CONTENTION)
       {
@@ -405,26 +412,27 @@ void S4::replicate_put_cross_site(const std::string& id,
 
     if (rc == HTTP_PRECONDITION_FAILED)
     {
-     /* SDM-REFACTOR-TODO FLIP
       // We've tried to do a PUT to a remote site that already has data. We need
       // to send a PATCH instead.
-      TRC_DEBUG("Need to convert PUT to PATCH for %s", _id.c_str());
+      TRC_DEBUG("Need to convert PUT to PATCH for %s on %s",
+                id.c_str(), _id.c_str());
 
-      PatchObject* po = new PatchObject();
-      aor->convert_aor_to_patch(po);
+      PatchObject po;
+      convert_aor_to_patch(aor, po);
+
       AoR* remote_aor = NULL;
-
       remote_s4->handle_patch(id, po, &remote_aor, trail);
-
-      delete po; po = NULL;
       delete remote_aor; remote_aor = NULL;
-      */
     }
   }
 }
 
+// Replicate the PATCH to each remote site. We don't care about the return code
+// from the remote sites unless it's PRECONDITION FAILED, in which case we want
+// to send a PUT instead (to reinstantiate the subscriber).
 void S4::replicate_patch_cross_site(const std::string& id,
                                     const PatchObject& po,
+                                    const AoR& aor,
                                     SAS::TrailId trail)
 {
   for (S4* remote_s4 : _remote_s4s)
@@ -435,15 +443,13 @@ void S4::replicate_patch_cross_site(const std::string& id,
 
     if (rc == HTTP_PRECONDITION_FAILED)
     {
-     /* SDM-REFACTOR-TODO FLIP
       // We've tried to do a PATCH to a remote site that doesn't have any data.
       // We need to send a PUT.
       TRC_DEBUG("Need to convert PATCH to PUT for %s", _id.c_str());
-      AoR* aor = new AoR(id);
-      aor->convert_patch_to_aor(po);
-      remote_s4->handle_put(id, aor, trail);
-      delete aor; aor = NULL;
-     */
+      AoR* aor_for_put = new AoR(id);
+      aor_for_put->copy_aor(aor);
+      remote_s4->handle_put(id, *aor_for_put, trail);
+      delete aor_for_put; aor_for_put = NULL;
     }
   }
 }
@@ -484,7 +490,6 @@ Store::Status S4::write_aor(const std::string& id,
                             AoR& aor,
                             SAS::TrailId trail)
 {
-  // SDM-REFACTOR-TODO: Set Chronos Timers
   Store::Status rc = _aor_store->set_aor_data(id,
                                               &aor,
                                               aor.get_last_expires() + 10,

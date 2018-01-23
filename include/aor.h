@@ -21,6 +21,7 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/document.h"
 #include "associated_uris.h"
+#include <boost/optional.hpp>
 
 /// JSON serialization constants.
 /// These live here, as the core logic of serialization lives in the AoR
@@ -31,7 +32,6 @@ static const char* const JSON_CSEQ = "cseq";
 static const char* const JSON_EXPIRES = "expires";
 static const char* const JSON_PRIORITY = "priority";
 static const char* const JSON_PARAMS = "params";
-static const char* const JSON_PATHS = "paths"; // Depracated as of PC release 119. SDM-REFACTOR-TODO: No longer needed. Delete.
 static const char* const JSON_PATH_HEADERS = "path_headers";
 static const char* const JSON_TIMER_ID = "timer_id";
 static const char* const JSON_PRIVATE_ID = "private_id";
@@ -182,7 +182,6 @@ public:
 typedef std::map<std::string, Subscription*> Subscriptions;
 typedef std::pair<std::string, Subscription*> SubscriptionPair;
 
-// SDM-REFACTOR-TODO: prototype
 class PatchObject
 {
 public:
@@ -196,14 +195,16 @@ public:
   PatchObject(const PatchObject& other);
   PatchObject& operator= (PatchObject const& other);
 
+  /// Public functions to get the member variables
   inline const Bindings get_update_bindings() const { return _update_bindings; }
   inline const std::vector<std::string> get_remove_bindings() const { return _remove_bindings; }
   inline const Subscriptions get_update_subscriptions() const { return _update_subscriptions; }
   inline const std::vector<std::string> get_remove_subscriptions() const { return _remove_subscriptions; }
-  inline const AssociatedURIs get_associated_uris() const { return _associated_uris; }
+  inline const boost::optional<AssociatedURIs> get_associated_uris() const { return _associated_uris; }
   inline const int get_minimum_cseq() const { return _minimum_cseq; }
   inline const bool get_increment_cseq() const { return _increment_cseq; }
 
+  /// Public functions to set the member variables
   inline void set_update_bindings(Bindings bindings) { _update_bindings = bindings; }
   inline void set_remove_bindings(std::vector<std::string> bindings) { _remove_bindings = bindings; }
   inline void set_update_subscriptions(Subscriptions subscriptions) { _update_subscriptions = subscriptions; }
@@ -219,12 +220,25 @@ private:
   /// Clear all the bindings and subscriptions from this object.
   void clear();
 
+  ///
   Bindings _update_bindings;
+
+  ///
   std::vector<std::string> _remove_bindings;
+
+  ///
   Subscriptions _update_subscriptions;
+
+  ///
   std::vector<std::string> _remove_subscriptions;
-  AssociatedURIs _associated_uris;
+
+  ///
+  boost::optional<AssociatedURIs> _associated_uris;
+
+  ///
   int _minimum_cseq;
+
+  ///
   bool _increment_cseq;
 };
 
@@ -303,12 +317,16 @@ public:
   /// AoR.
   ///
   /// @param source_aor           Source AoR for the copy
-  void copy_aor(AoR* source_aor);
+  void copy_aor(const AoR& source_aor);
 
-  // SDM-REFACTOR-TODO: Implement/comment/test
+  /// Patch an AoR with a partial update. The update covers adding or removing
+  /// individual bindings or subscriptions, replacing the AssociatedURIs,
+  /// incrementing the CSeq and setting the CSeq to at least a minimum value.
+  /// Any combination of the above is supported. This method can't be used to
+  /// change the timer ID or S-CSCF uri of the AoR.
+  ///
+  /// @param po PatchObject to patch the AoR with
   void patch_aor(const PatchObject& po);
-  void convert_aor_to_patch(PatchObject* po) {};
-  void convert_patch_to_aor(PatchObject* po) {};
 
   /// CSeq value for event notifications for this AoR.  This is initialised
   /// to one when the AoR record is first set up and incremented every time
@@ -408,5 +426,11 @@ private:
   /// The subscriber data manager is allowed to access the original AoR
   friend class SubscriberDataManager;
 };
+
+/// Convert an AoR to a PatchObject.
+///
+/// @param aor - AoR to convert to a PatchObject
+/// @param po  - PatchObject to be populated with the AoR info
+void convert_aor_to_patch(const AoR& aor, PatchObject& po);
 
 #endif

@@ -27,18 +27,24 @@
 class S4
 {
 public:
-  /// S4 constructor
+  /// S4 constructor - used for local S4s
   ///
   /// @param id[in]           - Site name of the S4. This is only used in logs.
   /// @param callback_uri[in] - Hostname that resolves to the S4s in the local
   ///                           site. Used as the Chronos callback URI.
   /// @param aor_store[in]    - Pointer to the underlying data store interface
-  /// @param remote_s4s[in]   - Pointers to all the remote S4s. If a remote S4
-  ///                           is created then this is an empty vector.
+  /// @param remote_s4s[in]   - Pointers to all the remote S4s.
   S4(std::string id,
      std::string callback_url,
      AoRStore* aor_store,
      std::vector<S4*> remote_s4s);
+
+  /// S4 constructor - used for remote S4s
+  ///
+  /// @param id[in]           - Site name of the S4. This is only used in logs.
+  /// @param aor_store[in]    - Pointer to the underlying data store interface
+  S4(std::string id,
+     AoRStore* aor_store);
 
   /// Destructor.
   ///
@@ -176,9 +182,15 @@ private:
   ///                    public identity.
   /// @param po[in]    - The patch object to patch and update the subscriber
   ///                    with.
+  /// @param aor[in]   - The AoR object to update the subscriber with. This is
+  ///                    only used if the PATCH fails with PRECONDITION_FAILED,
+  ///                    which is returned if the subscriber doesn't exist on
+  ///                    the remote site. In this case we send a PUT with the
+  ///                    aor.
   /// @param trail[in] - The SAS trail ID
   void replicate_patch_cross_site(const std::string& aor_id,
                                   const PatchObject& po,
+                                  const AoR& aor,
                                   SAS::TrailId trail);
 
   /// This replicates a PUT request from a client to the remote S4s. This
