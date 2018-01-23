@@ -491,8 +491,9 @@ Store::Status S4::write_aor(const std::string& id,
   int now = time(NULL);
 
   // Send any Chronos timer requests
-  if (_chronos_timer_request_sender->_chronos_conn && !_remote_s4s.empty())
+  if (_chronos_timer_request_sender->_chronos_conn)
   {
+   TRC_DEBUG("IN HER");
     _chronos_timer_request_sender->send_timers(id, &aor, now, trail);
   }
 
@@ -600,19 +601,6 @@ void S4::ChronosTimerRequestSender::set_timer(
   else
   {
     temp_timer_id = timer_id;
-    status = _chronos_conn->send_put(temp_timer_id,
-                                     expiry,
-                                     callback_uri,
-                                     opaque,
-                                     trail,
-                                     tags);
-  }
-
-  // Update the timer id. If the update to Chronos failed, that's OK,
-  // don't reject the request or update the stored timer id.
-  if (status == HTTP_OK)
-  {
-    timer_id = temp_timer_id;
     status = _chronos_conn->send_put(temp_timer_id,
                                      expiry,
                                      callback_uri,
