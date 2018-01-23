@@ -295,10 +295,7 @@ private:
 
   /// The ID of this S4.
   std::string _id;
-<<<<<<< HEAD
   ChronosTimerRequestSender* _chronos_timer_request_sender;
-||||||| merged common ancestors
-=======
 
   /// The callback URI this S4 puts on Chronos timers. This should be a hostname
   /// that resolves to all the local S4s in the local site.
@@ -307,7 +304,6 @@ private:
   /// The interface to Rogers (which owns actually reading and
   /// writing to Rogers, and coverting between an AoR object and the JSON
   /// representation of the AoR object.
->>>>>>> master
   AoRStore* _aor_store;
 
   /// The remote S4s. This is empty if this S4 is a remote S4 already.
