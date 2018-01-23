@@ -488,18 +488,14 @@ Store::Status S4::write_aor(const std::string& id,
                             AoR& aor,
                             SAS::TrailId trail)
 {
-  int next_expires;
-  int last_expires;
   int now = time(NULL);
-  aor->get_next_and_last_expires(next_expires, last_expires);
-
-  TRC_DEBUG("Expires are %d, %d: Now is %d", next_expires, last_expires, now);
 
   // Send any Chronos timer requests
   if (_chronos_timer_request_sender->_chronos_conn && !_remote_s4s.empty())
   {
-    _chronos_timer_request_sender->send_timers(aor_id, aor, now, trail);
+    _chronos_timer_request_sender->send_timers(id, &aor, now, trail);
   }
+
   Store::Status rc = _aor_store->set_aor_data(id,
                                               &aor,
                                               aor.get_last_expires() + 10,
@@ -514,6 +510,8 @@ Store::Status S4::write_aor(const std::string& id,
     TRC_DEBUG("Failed to write AoR for %s to %s",
               id.c_str(), _id.c_str());
   }
+
+  return rc;
 }
 
 S4::ChronosTimerRequestSender::
