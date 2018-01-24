@@ -202,7 +202,7 @@ public:
                                 SAS::TrailId trail);
 
   /// This deletes the subscriber from the local site. This should only be
-  /// called from another S4, not a client. the deployment.
+  /// called from another S4, not a client.
   ///
   /// @param id[in]    - The ID of the subscriber. This must be the default
   ///                    public identity.

@@ -368,7 +368,10 @@ HTTPCode S4::handle_patch(const std::string& id,
         // Subscriber has been updated on the local site, so send the PATCHs
         // out to the remote sites. The response to the SM is always going to be
         // OK independently of whether any remote PATCHs are successful.
-        replicate_patch_cross_site(id, po, **aor, trail);
+        PatchObject remote_po = PatchObject(po);
+        remote_po.set_increment_cseq(false);
+        remote_po.set_minimum_cseq((*aor)->_notify_cseq);
+        replicate_patch_cross_site(id, remote_po, **aor, trail);
       }
       else if (store_rc == Store::Status::DATA_CONTENTION)
       {
