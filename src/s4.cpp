@@ -31,9 +31,6 @@
 #include "astaire_aor_store.h"
 #include "chronosconnection.h"
 
-// SDM-REFACTOR-TODO:
-// 8. Full UT
-
 S4::S4(std::string id,
        ChronosConnection* chronos_connection,
        std::string callback_uri,
@@ -495,6 +492,14 @@ Store::Status S4::write_aor(const std::string& id,
                             AoR& aor,
                             SAS::TrailId trail)
 {
+  // If the AoR has no bindings then it should be deleted. Clear up any
+  // subscriptions.
+  if (aor.bindings().empty() && !aor.subscriptions().empty())
+  {
+    TRC_DEBUG("Cleaning up AoR");
+    aor.clear(true);
+  }
+
   int now = time(NULL);
 
   // Send any Chronos timer requests
@@ -572,7 +577,7 @@ void S4::ChronosTimerRequestSender::send_timers(const std::string& aor_id,
     TRC_DEBUG("get_next_expires returned 0. The expiry of AoR members "
               "is corrupt, or an empty (invalid) AoR was passed in.");
 
-    // LCOV_EXCL_END
+    // LCOV_EXCL_STOP
   }
 
   // Set the expiry time to be relative to now.
