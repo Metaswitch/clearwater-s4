@@ -220,25 +220,29 @@ private:
   /// Clear all the bindings and subscriptions from this object.
   void clear();
 
-  ///
+  /// The bindings to add/replace in an AoR
   Bindings _update_bindings;
 
-  ///
+  /// The bindings to remove from an AoR
   std::vector<std::string> _remove_bindings;
 
-  ///
+  /// The subscriptions to add/replace in an AoR
   Subscriptions _update_subscriptions;
 
-  ///
+  /// The subscriptions to remove from an AoR
   std::vector<std::string> _remove_subscriptions;
 
-  ///
+  /// The Associated URIs to replace in the AoR. This uses boost::optional to
+  /// distinguish between the empty AssociatedURIs that we get when the
+  /// PatchObject is created, and a geniunely empty set of AssociatedURIs that
+  /// we want to apply.
   boost::optional<AssociatedURIs> _associated_uris;
 
-  ///
+  /// What's the minimum value of the AoR CSeq after this patch has been
+  /// applied
   int _minimum_cseq;
 
-  ///
+  /// Whether the AoR's CSeq should be incremented when this patch is applied
   bool _increment_cseq;
 };
 
