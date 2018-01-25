@@ -241,19 +241,6 @@ void Binding::
     }
     writer.EndArray();
 
-    // SDM-REFACTOR-TODO: We don't need this upgrade code anymore. Delete it.
-    writer.String(JSON_PATHS);
-    writer.StartArray();
-    {
-      for (std::list<std::string>::const_iterator p = _path_uris.begin();
-           p != _path_uris.end();
-           ++p)
-      {
-        writer.String(p->c_str());
-      }
-    }
-    writer.EndArray();
-
     writer.String(JSON_PRIVATE_ID); writer.String(_private_id.c_str());
     writer.String(JSON_EMERGENCY_REG); writer.Bool(_emergency_registration);
   }
@@ -292,21 +279,6 @@ void Binding::from_json(const rapidjson::Value& b_obj)
     {
       JSON_ASSERT_STRING(*path_headers_it);
       _path_headers.push_back(path_headers_it->GetString());
-    }
-  }
-
-  // SDM-REFACTOR-TODO: We don't need this upgrade code anymore. Delete it.
-  if (b_obj.HasMember(JSON_PATHS))
-  {
-    JSON_ASSERT_ARRAY(b_obj[JSON_PATHS]);
-    const rapidjson::Value& path_uris_arr = b_obj[JSON_PATHS];
-
-    for (rapidjson::Value::ConstValueIterator path_uris_it = path_uris_arr.Begin();
-         path_uris_it != path_uris_arr.End();
-         ++path_uris_it)
-    {
-      JSON_ASSERT_STRING(*path_uris_it);
-      _path_uris.push_back(path_uris_it->GetString());
     }
   }
 
@@ -429,10 +401,10 @@ int AoR::get_next_expires()
   return _next_expires;
 }
 
-void AoR::copy_aor(AoR* source_aor)
+void AoR::copy_aor(const AoR& source_aor)
 {
-  for (Bindings::const_iterator i = source_aor->bindings().begin();
-       i != source_aor->bindings().end();
+  for (Bindings::const_iterator i = source_aor.bindings().begin();
+       i != source_aor.bindings().end();
        ++i)
   {
     Binding* src = i->second;
@@ -440,8 +412,8 @@ void AoR::copy_aor(AoR* source_aor)
     *dst = *src;
   }
 
-  for (Subscriptions::const_iterator i = source_aor->subscriptions().begin();
-       i != source_aor->subscriptions().end();
+  for (Subscriptions::const_iterator i = source_aor.subscriptions().begin();
+       i != source_aor.subscriptions().end();
        ++i)
   {
     Subscription* src = i->second;
@@ -449,11 +421,101 @@ void AoR::copy_aor(AoR* source_aor)
     *dst = *src;
   }
 
-  _associated_uris = AssociatedURIs(source_aor->_associated_uris);
-  _notify_cseq = source_aor->_notify_cseq;
-  _timer_id = source_aor->_timer_id;
-  _uri = source_aor->_uri;
-  _scscf_uri = source_aor->_scscf_uri;
+  _associated_uris = AssociatedURIs(source_aor._associated_uris);
+  _notify_cseq = source_aor._notify_cseq;
+  _timer_id = source_aor._timer_id;
+  _uri = source_aor._uri;
+  _scscf_uri = source_aor._scscf_uri;
+}
+
+// Patch the AoR. This does the following:
+//
+// TODO
+void AoR::patch_aor(const PatchObject& po)
+{
+  TRC_DEBUG("Patching the AoR for %s", _uri.c_str());
+
+  for (BindingPair b : po.get_update_bindings())
+  {
+    TRC_DEBUG("Updating the binding %s", b.first.c_str());
+
+    for (BindingPair b2 : _bindings)
+    {
+      if (b.first == b2.first)
+      {
+        _bindings.erase(b2.first);
+        delete b2.second;
+        break;
+      }
+    }
+
+    Binding* copy_b = new Binding(*(b.second));
+    _bindings.insert(std::make_pair(b.first, copy_b));
+  }
+
+  for (std::string b_id : po.get_remove_bindings())
+  {
+    TRC_DEBUG("Removing the binding %s", b_id.c_str());
+
+    for (BindingPair b : _bindings)
+    {
+      if (b_id == b.first)
+      {
+        _bindings.erase(b.first);
+        delete b.second;
+        break;
+      }
+    }
+  }
+
+  for (SubscriptionPair s : po.get_update_subscriptions())
+  {
+    TRC_DEBUG("Updating the subscription %s", s.first.c_str());
+
+    for (SubscriptionPair s2 : _subscriptions)
+    {
+      if (s.first == s2.first)
+      {
+        _subscriptions.erase(s2.first);
+        delete s2.second;
+        break;
+      }
+    }
+
+    Subscription* copy_s = new Subscription(*(s.second));
+    _subscriptions.insert(std::make_pair(s.first, copy_s));
+  }
+
+  for (std::string s_id : po.get_remove_subscriptions())
+  {
+    TRC_DEBUG("Removing the subscription %s", s_id.c_str());
+
+    for (SubscriptionPair s : _subscriptions)
+    {
+      if (s_id == s.first)
+      {
+        _subscriptions.erase(s.first);
+        delete s.second;
+        break;
+      }
+    }
+  }
+
+  if (po.get_associated_uris())
+  {
+    TRC_DEBUG("Updating the Associated URIs");
+    _associated_uris = po.get_associated_uris().get();
+  }
+
+  if (po.get_increment_cseq())
+  {
+    _notify_cseq++;
+  }
+
+  if ((po.get_minimum_cseq() != 0) && (_notify_cseq < po.get_minimum_cseq()))
+  {
+    _notify_cseq = po.get_minimum_cseq();
+  }
 }
 
 Bindings AoRPair::get_updated_bindings()
@@ -574,89 +636,12 @@ Subscriptions AoRPair::get_removed_subscriptions()
   return removed_subscriptions;
 }
 
-void AoR::patch_aor(const PatchObject& po)
-{
-  for (BindingPair b : po.get_update_bindings())
-  {
-    for (BindingPair b2 : _bindings)
-    {
-      if (b.first == b2.first)
-      {
-        _bindings.erase(b2.first);
-        delete b2.second;
-        break;
-      }
-    }
-
-    Binding* copy_b = new Binding(*(b.second));
-    _bindings.insert(std::make_pair(b.first, copy_b));
-  }
-
-  for (std::string b_id : po.get_remove_bindings())
-  {
-    for (BindingPair b : _bindings)
-    {
-      if (b_id == b.first)
-      {
-        _bindings.erase(b.first);
-        delete b.second;
-        break;
-      }
-    }
-  }
-
-  for (SubscriptionPair s : po.get_update_subscriptions())
-  {
-    for (SubscriptionPair s2 : _subscriptions)
-    {
-      if (s.first == s2.first)
-      {
-        _subscriptions.erase(s2.first);
-        delete s2.second;
-        break;
-      }
-    }
-
-    Subscription* copy_s = new Subscription(*(s.second));
-    _subscriptions.insert(std::make_pair(s.first, copy_s));
-  }
-
-  for (std::string s_id : po.get_remove_subscriptions())
-  {
-    for (SubscriptionPair s : _subscriptions)
-    {
-      if (s_id == s.first)
-      {
-        _subscriptions.erase(s.first);
-        delete s.second;
-        break;
-      }
-    }
-  }
-
-  //if (po->_associated_uris != NULL)
-  //{
-  //  delete _associated_uris;
-  //  _associated_uris = po->_associated_uris;
-  //}
-
-  if (po.get_increment_cseq())
-  {
-    _notify_cseq++;
-  }
-
-  if ((po.get_minimum_cseq() != 0) && (_notify_cseq < po.get_minimum_cseq()))
-  {
-    _notify_cseq = po.get_minimum_cseq();
-  }
-}
-
-// TODO assouris?
 PatchObject::PatchObject() :
   _update_bindings({}),
   _remove_bindings({}),
   _update_subscriptions({}),
   _remove_subscriptions({}),
+  _associated_uris(boost::optional<AssociatedURIs>{}),
   _minimum_cseq(0),
   _increment_cseq(false)
 {}
@@ -709,6 +694,11 @@ void PatchObject::common_constructor(const PatchObject& other)
     _remove_subscriptions.push_back(subscription);
   }
 
+  if (other.get_associated_uris())
+  {
+    _associated_uris = other.get_associated_uris().get();
+  }
+
   _minimum_cseq = other.get_minimum_cseq();
   _increment_cseq = other.get_increment_cseq();
 }
@@ -724,4 +714,36 @@ void PatchObject::clear()
   {
     delete s.second; s.second = NULL;
   }
+}
+
+/// Convert an AoR to a PatchObject.
+///
+/// @param aor - AoR to convert to a PatchObject
+/// @param po  - PatchObject to be populated with the AoR info
+void convert_aor_to_patch(const AoR& aor, PatchObject& po)
+{
+  Bindings patch_bindings;
+
+  for (BindingPair binding : aor.bindings())
+  {
+    patch_bindings.insert(
+                 std::make_pair(binding.first, new Binding(*(binding.second))));
+  }
+
+  Subscriptions patch_subscriptions;
+
+  for (SubscriptionPair subscription : aor.subscriptions())
+  {
+    patch_subscriptions.insert(
+                      std::make_pair(subscription.first,
+                                     new Subscription(*(subscription.second))));
+  }
+
+  AssociatedURIs associated_uris = aor._associated_uris;
+  int minimum = aor._notify_cseq;
+
+  po.set_update_bindings(patch_bindings);
+  po.set_update_subscriptions(patch_subscriptions);
+  po.set_associated_uris(associated_uris);
+  po.set_minimum_cseq(minimum);
 }

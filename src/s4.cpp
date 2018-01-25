@@ -31,22 +31,27 @@
 #include "astaire_aor_store.h"
 #include "chronosconnection.h"
 
-// SDM-REFACTOR-TODO:
-// 5. Implement PATCH
-// 6. Implement PATCH/PUT conversion, and protect against loops
-// 8. Full UT
-
 S4::S4(std::string id,
        ChronosConnection* chronos_connection,
        std::string callback_uri,
        AoRStore* aor_store,
        std::vector<S4*> remote_s4s) :
   _id(id),
+  _chronos_timer_request_sender(new ChronosTimerRequestSender(chronos_connection)),
   _chronos_callback_uri(callback_uri),
   _aor_store(aor_store),
   _remote_s4s(remote_s4s)
 {
-  _chronos_timer_request_sender = new ChronosTimerRequestSender(chronos_connection);
+}
+
+S4::S4(std::string id,
+       AoRStore* aor_store) :
+  _id(id),
+  _chronos_timer_request_sender(NULL),
+  _chronos_callback_uri(""),
+  _aor_store(aor_store),
+  _remote_s4s({})
+{
 }
 
 S4::~S4()
@@ -363,7 +368,10 @@ HTTPCode S4::handle_patch(const std::string& id,
         // Subscriber has been updated on the local site, so send the PATCHs
         // out to the remote sites. The response to the SM is always going to be
         // OK independently of whether any remote PATCHs are successful.
-        replicate_patch_cross_site(id, po, trail);
+        PatchObject remote_po = PatchObject(po);
+        remote_po.set_increment_cseq(false);
+        remote_po.set_minimum_cseq((*aor)->_notify_cseq);
+        replicate_patch_cross_site(id, remote_po, **aor, trail);
       }
       else if (store_rc == Store::Status::DATA_CONTENTION)
       {
@@ -409,26 +417,27 @@ void S4::replicate_put_cross_site(const std::string& id,
 
     if (rc == HTTP_PRECONDITION_FAILED)
     {
-     /* SDM-REFACTOR-TODO FLIP
       // We've tried to do a PUT to a remote site that already has data. We need
       // to send a PATCH instead.
-      TRC_DEBUG("Need to convert PUT to PATCH for %s", _id.c_str());
+      TRC_DEBUG("Need to convert PUT to PATCH for %s on %s",
+                id.c_str(), _id.c_str());
 
-      PatchObject* po = new PatchObject();
-      aor->convert_aor_to_patch(po);
+      PatchObject po;
+      convert_aor_to_patch(aor, po);
+
       AoR* remote_aor = NULL;
-
       remote_s4->handle_patch(id, po, &remote_aor, trail);
-
-      delete po; po = NULL;
       delete remote_aor; remote_aor = NULL;
-      */
     }
   }
 }
 
+// Replicate the PATCH to each remote site. We don't care about the return code
+// from the remote sites unless it's PRECONDITION FAILED, in which case we want
+// to send a PUT instead (to reinstantiate the subscriber).
 void S4::replicate_patch_cross_site(const std::string& id,
                                     const PatchObject& po,
+                                    const AoR& aor,
                                     SAS::TrailId trail)
 {
   for (S4* remote_s4 : _remote_s4s)
@@ -439,15 +448,13 @@ void S4::replicate_patch_cross_site(const std::string& id,
 
     if (rc == HTTP_PRECONDITION_FAILED)
     {
-     /* SDM-REFACTOR-TODO FLIP
       // We've tried to do a PATCH to a remote site that doesn't have any data.
       // We need to send a PUT.
       TRC_DEBUG("Need to convert PATCH to PUT for %s", _id.c_str());
-      AoR* aor = new AoR(id);
-      aor->convert_patch_to_aor(po);
-      remote_s4->handle_put(id, aor, trail);
-      delete aor; aor = NULL;
-     */
+      AoR* aor_for_put = new AoR(id);
+      aor_for_put->copy_aor(aor);
+      remote_s4->handle_put(id, *aor_for_put, trail);
+      delete aor_for_put; aor_for_put = NULL;
     }
   }
 }
@@ -488,12 +495,19 @@ Store::Status S4::write_aor(const std::string& id,
                             AoR& aor,
                             SAS::TrailId trail)
 {
+  // If the AoR has no bindings then it should be deleted. Clear up any
+  // subscriptions.
+  if (aor.bindings().empty() && !aor.subscriptions().empty())
+  {
+    TRC_DEBUG("Cleaning up AoR");
+    aor.clear(true);
+  }
+
   int now = time(NULL);
 
   // Send any Chronos timer requests
-  if (_chronos_timer_request_sender->_chronos_conn)
+  if (_chronos_timer_request_sender)
   {
-   TRC_DEBUG("IN HER");
     _chronos_timer_request_sender->send_timers(id, &aor, now, trail);
   }
 
@@ -525,7 +539,6 @@ S4::ChronosTimerRequestSender::~ChronosTimerRequestSender()
 {
 }
 
-
 void S4::ChronosTimerRequestSender::build_tag_info (
                                        AoR* aor,
                                        std::map<std::string, uint32_t>& tag_map)
@@ -535,7 +548,6 @@ void S4::ChronosTimerRequestSender::build_tag_info (
   tag_map["BIND"] = aor->get_bindings_count();
   tag_map["SUB"] = aor->get_subscriptions_count();
 }
-
 
 void S4::ChronosTimerRequestSender::send_timers(const std::string& aor_id,
                                                 AoR* aor,
@@ -561,18 +573,24 @@ void S4::ChronosTimerRequestSender::send_timers(const std::string& aor_id,
 
   if (next_expires == 0)
   {
-    // This should never happen, as an empty AoR should never reach get_next_expires
-    TRC_DEBUG("get_next_expires returned 0. The expiry of AoR members is corrupt, or an empty (invalid) AoR was passed in.");
+    // LCOV_EXCL_START - No UTs for unhittable code
+
+    // This should never happen, as an empty AoR should never reach
+    // get_next_expires
+    TRC_DEBUG("get_next_expires returned 0. The expiry of AoR members "
+              "is corrupt, or an empty (invalid) AoR was passed in.");
+
+    // LCOV_EXCL_STOP
   }
 
-    // Set the expiry time to be relative to now.
-    int expiry = (next_expires > now) ? (next_expires - now) : (now);
+  // Set the expiry time to be relative to now.
+  int expiry = (next_expires > now) ? (next_expires - now) : (now);
 
-    set_timer(aor_id,
-              timer_id,
-              expiry,
-              tags,
-              trail);
+  set_timer(aor_id,
+            timer_id,
+            expiry,
+            tags,
+            trail);
 }
 
 void S4::ChronosTimerRequestSender::set_timer(
@@ -616,4 +634,3 @@ void S4::ChronosTimerRequestSender::set_timer(
     timer_id = temp_timer_id;
   }
 }
-
