@@ -44,10 +44,12 @@ public:
     /// Create and send any appropriate Chronos requests
     ///
     /// @param aor_id       The AoR ID
+    //  @param callback_uri Callback URI for Chronos timer
     /// @param aor_pair     The AoR pair to send Chronos requests for
     /// @param now          The current time
     /// @param trail        SAS trail
     virtual void send_timers(const std::string& aor_id,
+                             const std::string& callback_uri,
                              AoR* aor,
                              int now,
                              SAS::TrailId trail);
@@ -66,11 +68,13 @@ public:
     ///
     /// @param aor_id       The AoR ID
     /// @param timer_id     The Timer ID
+    //  @param callback_uri Callback URI for Chronos timer
     /// @param expiry       Timer length
     /// @param tags         Any tags to add to the Chronos timer
     /// @param trail        SAS trail
     virtual void set_timer(const std::string& aor_id,
                            std::string& timer_id,
+                           const std::string& callback_uri,
                            int expiry,
                            std::map<std::string, uint32_t> tags,
                            SAS::TrailId trail);

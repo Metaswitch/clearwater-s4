@@ -508,7 +508,7 @@ Store::Status S4::write_aor(const std::string& id,
   // Send any Chronos timer requests
   if (_chronos_timer_request_sender)
   {
-    _chronos_timer_request_sender->send_timers(id, &aor, now, trail);
+    _chronos_timer_request_sender->send_timers(id, _chronos_callback_uri, &aor, now, trail);
   }
 
   Store::Status rc = _aor_store->set_aor_data(id,
@@ -550,6 +550,7 @@ void S4::ChronosTimerRequestSender::build_tag_info (
 }
 
 void S4::ChronosTimerRequestSender::send_timers(const std::string& aor_id,
+                                                const std::string& callback_uri,
                                                 AoR* aor,
                                                 int now,
                                                 SAS::TrailId trail)
@@ -588,6 +589,7 @@ void S4::ChronosTimerRequestSender::send_timers(const std::string& aor_id,
 
   set_timer(aor_id,
             timer_id,
+            callback_uri,
             expiry,
             tags,
             trail);
@@ -596,6 +598,7 @@ void S4::ChronosTimerRequestSender::send_timers(const std::string& aor_id,
 void S4::ChronosTimerRequestSender::set_timer(
                                           const std::string& aor_id,
                                           std::string& timer_id,
+                                          const std::string& callback_uri,
                                           int expiry,
                                           std::map<std::string, uint32_t> tags,
                                           SAS::TrailId trail)
@@ -603,7 +606,6 @@ void S4::ChronosTimerRequestSender::set_timer(
   std::string temp_timer_id = "";
   HTTPCode status;
   std::string opaque = "{\"aor_id\": \"" + aor_id + "\"}";
-  std::string callback_uri = "/timers";
 
   // If a timer has been previously set for this binding, send a PUT.
   // Otherwise sent a POST.
