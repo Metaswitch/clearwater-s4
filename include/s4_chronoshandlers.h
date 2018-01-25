@@ -14,11 +14,21 @@
 
 #include "s4_handlers.h"
 
+/**
+ * @brief S4 handler for dealing with Chronos timer pop
+ */
 class ChronosAoRTimeoutTaskHandler;
 
 class ChronosAoRTimeoutTask : public AoRTimeoutTask
 {
 public:
+  /**
+   * @brief 
+   *
+   * @param req
+   * @param cfg
+   * @param trail
+   */
   ChronosAoRTimeoutTask(HttpStack::Request& req,
                         const Config* cfg,
                         SAS::TrailId trail) :
@@ -28,8 +38,20 @@ public:
   void run();
 
 protected:
+  /**
+   * @brief 
+   *
+   * @param body
+   *
+   * @return 
+   */
   HTTPCode parse_response(std::string body);
+
+  /**
+   * @brief 
+   */
   void handle_response();
+
   std::string _aor_id;
 
   friend class ChronosAoRTimeoutTaskHandler;
