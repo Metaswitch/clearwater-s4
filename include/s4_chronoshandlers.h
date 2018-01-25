@@ -22,13 +22,6 @@ class ChronosAoRTimeoutTaskHandler;
 class ChronosAoRTimeoutTask : public AoRTimeoutTask
 {
 public:
-  /**
-   * @brief 
-   *
-   * @param req
-   * @param cfg
-   * @param trail
-   */
   ChronosAoRTimeoutTask(HttpStack::Request& req,
                         const Config* cfg,
                         SAS::TrailId trail) :
@@ -39,16 +32,19 @@ public:
 
 protected:
   /**
-   * @brief 
+   * @brief Parse Chronos timer pop request as JSON to retrieve aor_id
    *
-   * @param body
+   * @param body     body of the Chronos timer pop request
    *
-   * @return 
+   * @return Whether the request body has been parsed as JSON. This may be:
+   *   OK          - successfully stored aor_id from request
+   *   BAD_REQUEST - Failed to parse opaque data as JSON, or
+   *                 the opaque data is missing aor_id
    */
-  HTTPCode parse_response(std::string body);
+  HTTPCode parse_response(const std::string& body);
 
   /**
-   * @brief 
+   * @brief Deal with the timer pop request
    */
   void handle_response();
 

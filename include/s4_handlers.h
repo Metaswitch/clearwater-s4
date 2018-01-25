@@ -38,7 +38,12 @@ public:
   virtual void run() = 0;
 
 protected:
-  void process_aor_timeout(std::string aor_id);
+  /**
+   * @brief Call to Subscriber Manager to handle the timeout of this AoR.
+   *
+   * @param aor_id[in]    The AoR ID
+   */
+  void process_aor_timeout(const std::string& aor_id);
 
 protected:
   const Config* _cfg;

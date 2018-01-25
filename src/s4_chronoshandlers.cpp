@@ -58,7 +58,7 @@ void ChronosAoRTimeoutTask::run()
   PJUtils::run_callback_on_worker_thread(new ChronosAoRTimeoutTaskHandler(this), false);
 }
 
-HTTPCode ChronosAoRTimeoutTask::parse_response(std::string body)
+HTTPCode ChronosAoRTimeoutTask::parse_response(const std::string& body)
 {
   rapidjson::Document doc;
   std::string json_str = body;
