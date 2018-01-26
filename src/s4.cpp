@@ -413,9 +413,16 @@ void S4::handle_timer_pop(const std::string& aor_id,
 {
   if (_subscriber_manager != NULL)
   {
+    TRC_DEBUG("Calling subscriber manager to handle the timer pop");
     _subscriber_manager->handle_timer_pop(aor_id, trail);
   }
-};
+}
+
+void S4::mimic_timer_pop(const std::string& aor_id,
+                         SAS::TrailId trail) 
+{
+  TRC_DEBUG("Mimicking a timer pop to subscriber manager");
+}
 
 void S4::replicate_delete_cross_site(const std::string& id,
                                      SAS::TrailId trail)

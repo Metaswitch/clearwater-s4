@@ -189,7 +189,7 @@ public:
   PatchObject();
 
   /// Destructor
-  ~PatchObject();
+  virtual ~PatchObject();
 
   /// Make sure copy is deep!
   PatchObject(const PatchObject& other);
