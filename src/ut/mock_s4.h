@@ -38,6 +38,9 @@ class MockS4 : public S4
                                       const PatchObject& patch_object,
                                       AoR** aor,
                                       SAS::TrailId trail));
+
+  MOCK_METHOD2(handle_timer_pop, void(const std::string& aor_id,
+                                      SAS::TrailId trail));
 };
 
 #endif

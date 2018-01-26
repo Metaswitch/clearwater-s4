@@ -59,6 +59,16 @@ S4::~S4()
   delete _chronos_timer_request_sender;
 }
 
+void S4::initialise(BaseSubscriberManager* subscriber_manager)
+{
+  TRC_DEBUG("Setting reference to subscriber manager in local S4");
+
+  if (!_remote_s4s.empty())
+  {
+    _subscriber_manager = subscriber_manager;
+  }
+}
+
 HTTPCode S4::handle_get(const std::string& id,
                         AoR** aor,
                         uint64_t& version,
@@ -397,6 +407,15 @@ HTTPCode S4::handle_patch(const std::string& id,
 
   return rc;
 }
+
+void S4::handle_timer_pop(const std::string& aor_id,
+                          SAS::TrailId trail) 
+{
+  if (_subscriber_manager != NULL)
+  {
+    _subscriber_manager->handle_timer_pop(aor_id, trail);
+  }
+};
 
 void S4::replicate_delete_cross_site(const std::string& id,
                                      SAS::TrailId trail)
