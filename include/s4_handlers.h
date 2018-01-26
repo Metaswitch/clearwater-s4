@@ -15,6 +15,7 @@
 #include "httpstack.h"
 #include "httpstack_utils.h"
 #include "subscriber_manager.h"
+#include "s4.h"
 
 /// Base AoRTimeoutTask class for tasks that implement AoR timeout callbacks
 /// from specific timer services.
@@ -23,10 +24,10 @@ class AoRTimeoutTask : public HttpStackUtils::Task
 public:
   struct Config
   {
-    Config(SubscriberManager* sm) :
-      _sm(sm)
+    Config(S4* s4) :
+      _s4(s4)
     {}
-    SubscriberManager* _sm;
+    S4* _s4;
   };
 
   AoRTimeoutTask(HttpStack::Request& req,
@@ -38,11 +39,10 @@ public:
   virtual void run() = 0;
 
 protected:
-  /**
-   * @brief Call to Subscriber Manager to handle the timeout of this AoR.
-   *
-   * @param aor_id[in]    The AoR ID
-   */
+  
+  /// @brief Call to Subscriber Manager to handle the timeout of this AoR.
+  ///
+  /// @param aor_id[in]    The AoR ID
   void process_aor_timeout(const std::string& aor_id);
 
 protected:

@@ -20,6 +20,6 @@ void AoRTimeoutTask::process_aor_timeout(const std::string& aor_id)
 {
   TRC_DEBUG("Handling timer pop for AoR id: %s", aor_id.c_str());
   
-  return _cfg->_sm->handle_timer_pop(aor_id,
+  return _cfg->_s4->handle_timer_pop(aor_id,
                                      trail());
 }

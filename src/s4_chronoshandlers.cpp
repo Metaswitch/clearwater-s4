@@ -15,25 +15,6 @@
 #include "s4_chronoshandlers.h"
 #include "pjutils.h"
 
-class ChronosAoRTimeoutTaskHandler : public PJUtils::Callback
-{
-private:
-  ChronosAoRTimeoutTask* _task;
-
-public:
-  ChronosAoRTimeoutTaskHandler(ChronosAoRTimeoutTask* task) :
-    _task(task)
-  {
-  }
-
-  virtual void run()
-  {
-    _task->handle_response();
-
-    delete _task;
-  }
-};
-
 void ChronosAoRTimeoutTask::run()
 {
   if (_req.method() != htp_method_POST)
@@ -43,11 +24,11 @@ void ChronosAoRTimeoutTask::run()
     return;
   }
 
-  HTTPCode rc = parse_response(_req.get_rx_body());
+  HTTPCode rc = parse_request(_req.get_rx_body());
 
   if (rc != HTTP_OK)
   {
-    TRC_DEBUG("Unable to parse response from Chronos");
+    TRC_DEBUG("Unable to parse request from Chronos");
     send_http_reply(rc);
     delete this;
     return;
@@ -58,7 +39,7 @@ void ChronosAoRTimeoutTask::run()
   PJUtils::run_callback_on_worker_thread(new ChronosAoRTimeoutTaskHandler(this), false);
 }
 
-HTTPCode ChronosAoRTimeoutTask::parse_response(const std::string& body)
+HTTPCode ChronosAoRTimeoutTask::parse_request(const std::string& body)
 {
   rapidjson::Document doc;
   std::string json_str = body;
@@ -85,7 +66,7 @@ HTTPCode ChronosAoRTimeoutTask::parse_response(const std::string& body)
   return HTTP_OK;
 }
 
-void ChronosAoRTimeoutTask::handle_response()
+void ChronosAoRTimeoutTask::handle_request()
 {
   SAS::Marker start_marker(trail(), MARKER_ID_START, 1u);
   SAS::report_marker(start_marker);

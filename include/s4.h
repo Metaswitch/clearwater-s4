@@ -9,7 +9,6 @@
  * Metaswitch Networks in a separate written agreement.
  */
 
-
 #ifndef S4_H__
 #define S4_H__
 
@@ -24,6 +23,7 @@
 #include "astaire_aor_store.h"
 #include "httpclient.h"
 #include "chronosconnection.h"
+#include "base_subscriber_manager.h"
 
 class S4
 {
@@ -106,6 +106,10 @@ public:
   /// S4 doesn't own the memory for its pointer member variables, so there's
   /// nothing to do to clean up.
   virtual ~S4();
+
+  /// Called by subscriber manager constructor to store a reference to the SM in
+  /// local S4.
+  void initialise(BaseSubscriberManager* subscriber_manager);
 
   /// This sends a request to S4 to get the data for a subscriber. This looks
   /// in the local store. If the local store returns NOT_FOUND, this asks the
@@ -215,6 +219,13 @@ public:
   ///                  information is unknown.
   virtual void handle_remote_delete(const std::string& id,
                                     SAS::TrailId trail);
+  
+  /// Handle a timer pop by notifying Subscriber Manager.
+  ///
+  /// @param[in]  aor_id        The AoR ID to handle a timer pop for
+  /// @param[in]  trail         The SAS trail ID
+  virtual void handle_timer_pop(const std::string& aor_id,
+                                SAS::TrailId trail);
 
 private:
   /// This replicates a DELETE request from a client to the remote S4s. This
@@ -306,8 +317,11 @@ private:
   /// The ID of this S4.
   std::string _id;
 
-  /// TODO comment
+  /// Responsible for sending Chronos timer request and only exists in local S4
   ChronosTimerRequestSender* _chronos_timer_request_sender;
+
+  /// For local S4 to store a reference to the subscriber manager it deals with
+  BaseSubscriberManager* _subscriber_manager;
 
   /// The callback URI this S4 puts on Chronos timers. This should be a hostname
   /// that resolves to all the local S4s in the local site.
