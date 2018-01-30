@@ -409,7 +409,7 @@ HTTPCode S4::handle_patch(const std::string& id,
 }
 
 void S4::handle_timer_pop(const std::string& aor_id,
-                          SAS::TrailId trail) 
+                          SAS::TrailId trail)
 {
   if (_subscriber_manager != NULL)
   {
@@ -530,9 +530,15 @@ Store::Status S4::write_aor(const std::string& id,
     _chronos_timer_request_sender->send_timers(id, _chronos_callback_uri, &aor, now, trail);
   }
 
+  // If we have a non-zero expiry, set the expiry in memcached to 10s later than
+  // when the data is due to expire. This prevents a window condition where
+  // Chronos can return a binding to expire, but memcached has already deleted
+  // the AoR data (meaning that no NOTIFYs can be sent). If the expiry is 0, we
+  // want to expire this data immediately so set the expiry to 0.
   Store::Status rc = _aor_store->set_aor_data(id,
                                               &aor,
-                                              aor.get_last_expires() + 10,
+                                              (aor.get_last_expires() != 0) ?
+                                                aor.get_last_expires() + 10 : 0,
                                               trail);
   if (rc == Store::Status::OK)
   {
