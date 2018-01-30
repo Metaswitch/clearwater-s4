@@ -531,12 +531,18 @@ Store::Status S4::write_aor(const std::string& id,
 
   int now = time(NULL);
 
-  // Send any Chronos timer requests
+  // Send Chronos timer requests if it's a local store.
   if (_chronos_timer_request_sender)
   {
     _chronos_timer_request_sender->send_timers(id, _chronos_callback_uri, &aor, now, trail);
   }
 
+  // Check if any binding has expired and send mimic timer pop.
+  if (!aor.bindings().empty() && aor.get_next_expires() <= now)
+  {
+    mimic_timer_pop(id, trail);
+  }  
+ 
   Store::Status rc = _aor_store->set_aor_data(id,
                                               &aor,
                                               aor.get_last_expires() + 10,
