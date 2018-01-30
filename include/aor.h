@@ -371,66 +371,6 @@ public:
   friend class SubscriberDataManager;
 };
 
-/// @class AoRPair
-///
-/// Class to hold a pair of AoRs. The original AoR holds the AoR retrieved
-/// from the store, the current AoR holds any changes made to the AoR before
-/// it's put back in the store
-class AoRPair
-{
-public:
-  AoRPair(std::string aor_id)
-  {
-    _orig_aor = new AoR(aor_id);
-    _current_aor = new AoR(aor_id);
-  }
-
-  AoRPair(AoR* orig_aor, AoR* current_aor):
-    _orig_aor(orig_aor),
-    _current_aor(current_aor)
-  {}
-
-  ~AoRPair()
-  {
-    delete _orig_aor; _orig_aor = NULL;
-    delete _current_aor; _current_aor = NULL;
-  }
-
-  /// Get the current AoR
-  AoR* get_current() { return _current_aor; }
-
-  /// Does the current AoR contain any bindings?
-  bool current_contains_bindings()
-  {
-    return ((_current_aor != NULL) &&
-            (!_current_aor->_bindings.empty()));
-  }
-
-  /// Does the current AoR contain any subscriptions?
-  bool current_contains_subscriptions()
-  {
-    return ((_current_aor != NULL) &&
-            (!_current_aor->subscriptions().empty()));
-  }
-
-  /// Utility functions to compare Bindings and Subscriptions in the original AoR
-  /// and current AoR, and return the set of those created/updated or removed.
-  Bindings get_updated_bindings();
-  Subscriptions get_updated_subscriptions();
-  Bindings get_removed_bindings();
-  Subscriptions get_removed_subscriptions();
-
-private:
-  AoR* _orig_aor;
-  AoR* _current_aor;
-
-  /// Get the original AoR
-  AoR* get_orig() { return _orig_aor; }
-
-  /// The subscriber data manager is allowed to access the original AoR
-  friend class SubscriberDataManager;
-};
-
 /// Convert an AoR to a PatchObject.
 ///
 /// @param aor - AoR to convert to a PatchObject
