@@ -76,3 +76,9 @@ void ChronosAoRTimeoutTask::handle_request()
   SAS::Marker end_marker(trail(), MARKER_ID_END, 1u);
   SAS::report_marker(end_marker);
 }
+
+void MimicPopTask::handle_request()
+{
+  _s4->handle_timer_pop(_aor_id, _trail);
+}
+

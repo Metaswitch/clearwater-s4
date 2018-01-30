@@ -71,4 +71,47 @@ public:
 };
 
 
+class MimicPopHandler;
+
+class MimicPopTask
+{
+public:
+  MimicPopTask(std::string aor_id,
+               S4* s4,
+               SAS::TrailId trail) :
+    _aor_id(aor_id),
+    _s4(s4),
+    _trail(trail)
+  {
+  }
+
+protected:
+  void handle_request();
+
+  std::string _aor_id;
+  S4* _s4;
+  SAS::TrailId _trail;
+
+  friend class MimicPopHandler;
+};
+
+class MimicPopHandler : public PJUtils::Callback
+{
+private:
+  MimicPopTask* _task;
+
+public:
+  MimicPopHandler(MimicPopTask* task) :
+    _task(task)
+  {
+  }
+
+  virtual void run()
+  {
+    _task->handle_request();
+
+    delete _task;
+  }
+};
+
 #endif
