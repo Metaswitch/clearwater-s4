@@ -427,7 +427,8 @@ void S4::mimic_timer_pop(const std::string& aor_id,
   // Create a task to send timer pop and put it on worker thread, same as
   // ChronosAoRTimeoutTask.
   PJUtils::run_callback_on_worker_thread(
-             new MimicPopHandler(new MimicPopTask(aor_id, this, trail)), false);
+           new MimicTimerPopHandler(new MimicTimerPopTask(aor_id, this, trail)), 
+           false);
 }
 
 void S4::replicate_delete_cross_site(const std::string& id,
@@ -538,8 +539,6 @@ Store::Status S4::write_aor(const std::string& id,
   }
 
   int now = time(NULL);
-
-  printf("\nnext expires %d now %d\n", aor.get_next_expires(), now);
 
   // Send Chronos timer requests if it's a local store.
   if (_chronos_timer_request_sender)

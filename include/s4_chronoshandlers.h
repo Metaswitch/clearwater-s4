@@ -70,13 +70,15 @@ public:
   }
 };
 
+/// Class definition comes after MimicTimerPopTask
+class MimicTimerPopHandler;
 
-class MimicPopHandler;
-
-class MimicPopTask
+/// The task to mimic a timer pop for (implicitly) expired bindings by callling
+/// S4 to handle_timer_pop.
+class MimicTimerPopTask
 {
 public:
-  MimicPopTask(std::string aor_id,
+  MimicTimerPopTask(std::string aor_id,
                S4* s4,
                SAS::TrailId trail) :
     _aor_id(aor_id),
@@ -92,16 +94,17 @@ protected:
   S4* _s4;
   SAS::TrailId _trail;
 
-  friend class MimicPopHandler;
+  friend class MimicTimerPopHandler;
 };
 
-class MimicPopHandler : public PJUtils::Callback
+/// This handler puts the MimicTimerPopTask on workers thread.
+class MimicTimerPopHandler : public PJUtils::Callback
 {
 private:
-  MimicPopTask* _task;
+  MimicTimerPopTask* _task;
 
 public:
-  MimicPopHandler(MimicPopTask* task) :
+  MimicTimerPopHandler(MimicTimerPopTask* task) :
     _task(task)
   {
   }
