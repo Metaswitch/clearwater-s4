@@ -41,6 +41,9 @@ class MockS4 : public S4
 
   MOCK_METHOD2(handle_timer_pop, void(const std::string& aor_id,
                                       SAS::TrailId trail));
+
+  MOCK_METHOD2(mimic_timer_pop, void(const std::string& aor_id,
+                                     SAS::TrailId trail));
 };
 
 #endif

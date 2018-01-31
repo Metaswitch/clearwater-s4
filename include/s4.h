@@ -313,6 +313,13 @@ private:
                           AoR& aor,
                           SAS::TrailId trail);
 
+  /// This creates a mimic of timer pop from Chronos request, and put it on the
+  /// worker thread. It's used whenever S4 finds that a binding has expired
+  /// processing other task, so that the timer pop will trigger off a task in
+  /// subscriber manager.
+  void mimic_timer_pop(const std::string& aor_id,
+                       SAS::TrailId trail);
+
   /// Gets the ID of this S4. This is only used for logging.
   ///
   /// @return The ID of this S4

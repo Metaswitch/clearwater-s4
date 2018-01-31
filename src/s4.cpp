@@ -30,6 +30,7 @@
 #include "s4.h"
 #include "astaire_aor_store.h"
 #include "chronosconnection.h"
+#include "s4_chronoshandlers.h"
 
 S4::S4(std::string id,
        ChronosConnection* chronos_connection,
@@ -413,9 +414,22 @@ void S4::handle_timer_pop(const std::string& aor_id,
 {
   if (_subscriber_manager != NULL)
   {
+    TRC_DEBUG("Calling subscriber manager to handle the timer pop");
     _subscriber_manager->handle_timer_pop(aor_id, trail);
   }
-};
+}
+
+void S4::mimic_timer_pop(const std::string& aor_id,
+                         SAS::TrailId trail) 
+{
+  TRC_DEBUG("Mimicking a timer pop to subscriber manager");
+
+  // Create a task to send timer pop and put it on worker thread, same as
+  // ChronosAoRTimeoutTask.
+  PJUtils::run_callback_on_worker_thread(
+           new MimicTimerPopHandler(new MimicTimerPopTask(aor_id, this, trail)), 
+           false);
+}
 
 void S4::replicate_delete_cross_site(const std::string& id,
                                      SAS::TrailId trail)
@@ -514,6 +528,8 @@ Store::Status S4::write_aor(const std::string& id,
                             AoR& aor,
                             SAS::TrailId trail)
 {
+  TRC_DEBUG("Writing AoR to store");
+
   // If the AoR has no bindings then it should be deleted. Clear up any
   // subscriptions.
   if (aor.bindings().empty() && !aor.subscriptions().empty())
@@ -524,12 +540,20 @@ Store::Status S4::write_aor(const std::string& id,
 
   int now = time(NULL);
 
-  // Send any Chronos timer requests
+  // Send Chronos timer requests if it's a local store.
   if (_chronos_timer_request_sender)
   {
+    TRC_DEBUG("Sending Chronos timer requests for local store");
     _chronos_timer_request_sender->send_timers(id, _chronos_callback_uri, &aor, now, trail);
   }
 
+  // Check if any binding has expired and send mimic timer pop.
+  if (!aor.bindings().empty() && aor.get_next_expires() <= now)
+  {
+    TRC_DEBUG("Some binding has expired");
+    mimic_timer_pop(id, trail);
+  }  
+ 
   // If we have a non-zero expiry, set the expiry in memcached to 10s later than
   // when the data is due to expire. This prevents a window condition where
   // Chronos can return a binding to expire, but memcached has already deleted
