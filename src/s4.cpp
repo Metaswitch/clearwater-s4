@@ -63,11 +63,7 @@ S4::~S4()
 void S4::initialise(BaseSubscriberManager* subscriber_manager)
 {
   TRC_DEBUG("Setting reference to subscriber manager in local S4");
-
-  if (!_remote_s4s.empty())
-  {
-    _subscriber_manager = subscriber_manager;
-  }
+  _subscriber_manager = subscriber_manager;
 }
 
 HTTPCode S4::handle_get(const std::string& id,
@@ -420,14 +416,14 @@ void S4::handle_timer_pop(const std::string& aor_id,
 }
 
 void S4::mimic_timer_pop(const std::string& aor_id,
-                         SAS::TrailId trail) 
+                         SAS::TrailId trail)
 {
   TRC_DEBUG("Mimicking a timer pop to subscriber manager");
 
   // Create a task to send timer pop and put it on worker thread, same as
   // ChronosAoRTimeoutTask.
   PJUtils::run_callback_on_worker_thread(
-           new MimicTimerPopHandler(new MimicTimerPopTask(aor_id, this, trail)), 
+           new MimicTimerPopHandler(new MimicTimerPopTask(aor_id, this, trail)),
            false);
 }
 
@@ -552,8 +548,8 @@ Store::Status S4::write_aor(const std::string& id,
   {
     TRC_DEBUG("Some binding has expired");
     mimic_timer_pop(id, trail);
-  }  
- 
+  }
+
   // If we have a non-zero expiry, set the expiry in memcached to 10s later than
   // when the data is due to expire. This prevents a window condition where
   // Chronos can return a binding to expire, but memcached has already deleted
