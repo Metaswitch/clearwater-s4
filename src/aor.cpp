@@ -29,7 +29,6 @@ AoR::AoR(std::string sip_uri) :
 {
 }
 
-
 /// Destructor.
 AoR::~AoR()
 {
@@ -53,6 +52,65 @@ AoR& AoR::operator= (AoR const& other)
   }
 
   return *this;
+}
+
+bool AoR::operator==(const AoR& other) const
+{
+  bool bindings_equal = false;
+
+  if (_bindings.size() == other._bindings.size())
+  {
+    for (BindingPair binding : _bindings)
+    {
+      if (other._bindings.find(binding.first) == other._bindings.end())
+      {
+        break;
+      }
+      else if (*(binding.second) != *(other._bindings.at(binding.first)))
+      {
+        break;
+      }
+    }
+
+    bindings_equal = true;
+  }
+
+  bool subscriptions_equal = false;
+
+  if (_subscriptions.size() == other._subscriptions.size())
+  {
+    for (SubscriptionPair subscription : _subscriptions)
+    {
+      if (other._subscriptions.find(subscription.first) == other._subscriptions.end())
+      {
+        break;
+      }
+      else if (*(subscription.second) != *(other._subscriptions.at(subscription.first)))
+      {
+        break;
+      }
+    }
+
+    subscriptions_equal = true;
+  }
+
+  if ((_notify_cseq != other._notify_cseq) ||
+      (_timer_id != other._timer_id) ||
+      (_scscf_uri != other._scscf_uri) ||
+      (!bindings_equal) ||
+      (!subscriptions_equal) ||
+      (_associated_uris != other._associated_uris) ||
+      (_cas != other._cas))
+  {
+    return false;
+  }
+
+  return true;
+}
+
+bool AoR::operator!=(const AoR& other) const
+{
+  return !(operator==(other));
 }
 
 void AoR::common_constructor(const AoR& other)
@@ -205,6 +263,67 @@ Binding::Binding(std::string address_of_record) :
   _emergency_registration(false)
 {}
 
+/// Copy constructor.
+Binding::Binding(const Binding& other)
+{
+  _address_of_record = other._address_of_record;
+  _uri = other._uri;
+  _cid = other._cid;
+  _path_headers = other._path_headers;
+  _path_uris = other._path_uris;
+  _cseq = other._cseq;
+  _expires = other._expires;
+  _priority = other._priority;
+  _params = other._params;
+  _private_id = other._private_id;
+  _emergency_registration = other._emergency_registration;
+}
+
+// Make sure assignment is deep!
+Binding& Binding::operator= (Binding const& other)
+{
+  if (this != &other)
+  {
+    _address_of_record = other._address_of_record;
+    _uri = other._uri;
+    _cid = other._cid;
+    _path_headers = other._path_headers;
+    _path_uris = other._path_uris;
+    _cseq = other._cseq;
+    _expires = other._expires;
+    _priority = other._priority;
+    _params = other._params;
+    _private_id = other._private_id;
+    _emergency_registration = other._emergency_registration;
+  }
+
+  return *this;
+}
+
+bool Binding::operator==(const Binding& other) const
+{
+  if ((_address_of_record != other._address_of_record) ||
+      (_uri != other._uri) ||
+      (_cid != other._cid) ||
+      (_path_headers != other._path_headers) ||
+      (_path_uris != other._path_uris) ||
+      (_cseq != other._cseq) ||
+      (_expires != other._expires) ||
+      (_priority != other._priority) ||
+      (_params != other._params) ||
+      (_private_id != other._private_id) ||
+      (_emergency_registration != other._emergency_registration))
+  {
+    return false;
+  }
+
+  return true;
+}
+
+bool Binding::operator!=(const Binding& other) const
+{
+  return !(operator==(other));
+}
 
 void Binding::
   to_json(rapidjson::Writer<rapidjson::StringBuffer>& writer) const
@@ -284,6 +403,63 @@ void Binding::from_json(const rapidjson::Value& b_obj)
 
   JSON_GET_STRING_MEMBER(b_obj, JSON_PRIVATE_ID, _private_id);
   JSON_GET_BOOL_MEMBER(b_obj, JSON_EMERGENCY_REG, _emergency_registration);
+}
+
+/// Copy constructor.
+Subscription::Subscription(const Subscription& other)
+{
+  _req_uri = other._req_uri;
+  _from_uri = other._from_uri;
+  _from_tag = other._from_tag;
+  _to_uri = other._to_uri;
+  _to_tag = other._to_tag;
+  _cid = other._cid;
+  _refreshed = other._refreshed;
+  _route_uris = other._route_uris;
+  _expires = other._expires;
+}
+
+// Make sure assignment is deep!
+Subscription& Subscription::operator= (Subscription const& other)
+{
+  if (this != &other)
+  {
+    _req_uri = other._req_uri;
+    _from_uri = other._from_uri;
+    _from_tag = other._from_tag;
+    _to_uri = other._to_uri;
+    _to_tag = other._to_tag;
+    _cid = other._cid;
+    _refreshed = other._refreshed;
+    _route_uris = other._route_uris;
+    _expires = other._expires;
+  }
+
+  return *this;
+}
+
+bool Subscription::operator==(const Subscription& other) const
+{
+  // Only comparing associated URIs and barring, not wildcard mappings
+  if ((_req_uri != other._req_uri) ||
+      (_from_uri != other._from_uri) ||
+      (_from_tag != other._from_tag) ||
+      (_to_uri != other._to_uri) ||
+      (_to_tag != other._to_tag) ||
+      (_cid != other._cid) ||
+      (_refreshed != other._refreshed) ||
+      (_route_uris != other._route_uris) ||
+      (_expires != other._expires))
+  {
+    return false;
+  }
+
+  return true;
+}
+
+bool Subscription::operator!=(const Subscription& other) const
+{
+  return !(operator==(other));
 }
 
 void Subscription::

@@ -54,6 +54,15 @@ class Binding
 public:
   Binding(std::string address_of_record);
 
+  /// Make sure copy is deep!
+  Binding(const Binding& other);
+  Binding& operator= (Binding const& other);
+
+  // Compares the contents of this class instance to another, to see
+  // if they are the same.
+  bool operator==(const Binding& other) const;
+  bool operator!=(const Binding& other) const;
+
   /// The address of record, e.g. "sip:name@example.com".
   std::string _address_of_record;
 
@@ -128,6 +137,15 @@ class Subscription
 {
 public:
   Subscription(): _refreshed(false), _expires(0) {};
+
+  /// Make sure copy is deep!
+  Subscription(const Subscription& other);
+  Subscription& operator= (Subscription const& other);
+
+  // Compares the contents of this class instance to another, to see
+  // if they are the same.
+  bool operator==(const Subscription& other) const;
+  bool operator!=(const Subscription& other) const;
 
   /// The Contact URI for the subscription dialog (used as the Request URI
   /// of the NOTIFY)
@@ -252,8 +270,8 @@ private:
 class AoR
 {
 public:
-  /// Default Constructor.
-  AoR(std::string sip_uri);
+  /// Constructor.
+  AoR(std::string sip_uri = "");
 
   /// Destructor.
   ~AoR();
@@ -263,6 +281,11 @@ public:
 
   // Make sure assignment is deep!
   AoR& operator= (AoR const& other);
+
+  // Compares the contents of this class instance to another, to see
+  // if they are the same.
+  bool operator==(const AoR& other) const;
+  bool operator!=(const AoR& other) const;
 
   // Common code between copy and assignment
   void common_constructor(const AoR& other);
@@ -368,7 +391,6 @@ public:
 
   /// Store code is allowed to manipulate bindings and subscriptions directly.
   friend class AoRStore;
-  friend class SubscriberDataManager;
 };
 
 /// Convert an AoR to a PatchObject.
