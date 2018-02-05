@@ -30,6 +30,9 @@ static const char* const JSON_WILDCARD = "wildcard";
 struct AssociatedURIs
 {
 public:
+  AssociatedURIs();
+  ~AssociatedURIs();
+
   /// Gets sthe default IMPU from an implicit registration set.
   bool get_default_impu(std::string& uri,
                         bool emergency);
@@ -53,7 +56,7 @@ public:
   std::vector<std::string> get_unbarred_uris();
 
   /// Returns all the barred URIs.
-  std::vector<std::string> get_barred_uris();
+  std::vector<std::string> get_barred_uris() const;
 
   /// Returns all URIs.
   std::vector<std::string> get_all_uris();
@@ -79,8 +82,8 @@ public:
 
   // Compares the contents of this class instance to another, to see
   // if they are the same.
-  bool operator==(AssociatedURIs associated_uris_other);
-  bool operator!=(AssociatedURIs associated_uris_other);
+  bool operator==(AssociatedURIs other) const;
+  bool operator!=(AssociatedURIs other) const;
 
 private:
   /// A vector of associated URIs.

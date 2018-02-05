@@ -16,6 +16,17 @@
 #include "json_parse_utils.h"
 #include "rapidjson/error/en.h"
 
+AssociatedURIs::AssociatedURIs() :
+  _associated_uris({}),
+  _barred_map({}),
+  _distinct_to_wildcard({})
+{
+}
+
+AssociatedURIs::~AssociatedURIs()
+{
+}
+
 // Gets the default URI. We return the first unbarred URI. If there is no
 // unbarred URI, we don't return anything unless it is an emergency in which
 // case we return the first URI.
@@ -115,13 +126,13 @@ std::vector<std::string> AssociatedURIs::get_unbarred_uris()
 }
 
 // Returns all barred associated URIs.
-std::vector<std::string> AssociatedURIs::get_barred_uris()
+std::vector<std::string> AssociatedURIs::get_barred_uris() const
 {
   std::vector<std::string> barred_uris;
 
   for (std::string uri : _associated_uris)
   {
-    if (_barred_map[uri])
+    if (_barred_map.find(uri) != _barred_map.end())
     {
       barred_uris.push_back(uri);
     }
@@ -223,18 +234,19 @@ void AssociatedURIs::from_json(const rapidjson::Value& au_obj)
   }
 }
 
-bool AssociatedURIs::operator==(AssociatedURIs associated_uris_other)
+bool AssociatedURIs::operator==(AssociatedURIs other) const
 {
   // Only comparing associated URIs and barring, not wildcard mappings
-  if (_associated_uris != associated_uris_other.get_all_uris() ||
-      get_barred_uris() != associated_uris_other.get_barred_uris())
+  if ((_associated_uris != other._associated_uris) ||
+      (get_barred_uris() != other.get_barred_uris()))
   {
     return false;
   }
+
   return true;
 }
 
-bool AssociatedURIs::operator!=(AssociatedURIs associated_uris_other)
+bool AssociatedURIs::operator!=(AssociatedURIs other) const
 {
-  return !(operator==(associated_uris_other));
+  return !(operator==(other));
 }
