@@ -66,8 +66,6 @@ public:
   /// The address of record, e.g. "sip:name@example.com".
   std::string _address_of_record;
 
-  /// This is the binding ID. SDM-REFACTOR-TODO: Actually it might not always be.
-  /// See get_binding_id() in registrarsproutlet.cpp
   /// The registered contact URI, e.g.,
   /// "sip:2125551212@192.168.0.1:55491;transport=TCP;rinstance=fad34fbcdea6a931"
   std::string _uri;
@@ -107,9 +105,6 @@ public:
 
   /// Whether this is an emergency registration.
   bool _emergency_registration;
-
-  /// Returns the ID of this binding.
-  std::string get_id() const { return _uri; }
 
   /// Serialize the binding as a JSON object.
   ///
@@ -238,16 +233,16 @@ private:
   /// Clear all the bindings and subscriptions from this object.
   void clear();
 
-  /// The bindings to add/replace in an AoR
+  /// The bindings to add/replace in an AoR.
   Bindings _update_bindings;
 
-  /// The bindings to remove from an AoR
+  /// The bindings to remove from an AoR.
   std::vector<std::string> _remove_bindings;
 
-  /// The subscriptions to add/replace in an AoR
+  /// The subscriptions to add/replace in an AoR.
   Subscriptions _update_subscriptions;
 
-  /// The subscriptions to remove from an AoR
+  /// The subscriptions to remove from an AoR.
   std::vector<std::string> _remove_subscriptions;
 
   /// The Associated URIs to replace in the AoR. This uses boost::optional to
@@ -257,10 +252,26 @@ private:
   boost::optional<AssociatedURIs> _associated_uris;
 
   /// What's the minimum value of the AoR CSeq after this patch has been
-  /// applied
+  /// applied. This is used when S4 sends a PatchObhect to another S4. On this
+  /// interface we want the local and remote S4s to end up with the same CSeq
+  /// if possible. We don't want to set the remote S4's data's CSeq to an
+  /// absolute, as that will do the wrong thing if the local/remote S4s have
+  /// gotten out of sync already (i.e. if the local S4 has a CSeq of 3 and the
+  /// remote S4 has a CSeq of 6, the remote S4 should keep its CSeq of 6). We
+  /// don't want to force the remote S4 to increment their CSeq either, as this
+  /// just allows any imbalance in the CSeqs to continue. Instead, the local S4
+  /// sets a minimun value, and it's down to the remote S4 to decide the value
+  /// of the CSeq for its data.
   int _minimum_cseq;
 
-  /// Whether the AoR's CSeq should be incremented when this patch is applied
+  /// Whether the AoR's CSeq should be incremented when this patch is applied.
+  /// This is used when a client sends a PatchObject to S4. In this case, the
+  /// client has enough information to make a decision about whether the CSeq
+  /// should be incremented. It doesn't want to say what the CSeq should be,
+  /// as this means that if there's data change between a client getting data
+  /// and patching data then CSeq increases can be lost. Instead the client
+  /// asks to simply increment the CSeq, and S4 is responsible for dealing with
+  /// any contention on the write.
   bool _increment_cseq;
 };
 
@@ -326,8 +337,6 @@ public:
   // Return the expiry time of the binding or subscription due to expire next.
   int get_next_expires();
 
-  /// get_last_expires
-  ///
   /// This returns the expiry time of the binding or subscription due to expire
   /// last.
   /// The expiry time is relative, so if this was called on an AoR containing a
@@ -359,8 +368,8 @@ public:
   /// to one when the AoR record is first set up and incremented every time
   /// the record is updated while there are active subscriptions.  (It is
   /// sufficient to use the same CSeq for each NOTIFY sent on each active
-  /// because there is no requirement that the first NOTIFY in a dialog has
-  /// CSeq=1, and once a subscription dialog is established it should
+  /// subscription because there is no requirement that the first NOTIFY in a
+  /// dialog has CSeq=1, and once a subscription dialog is established it should
   /// receive every NOTIFY for the AoR.)
   int _notify_cseq;
 

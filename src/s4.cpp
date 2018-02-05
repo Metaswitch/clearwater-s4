@@ -9,22 +9,6 @@
  * Metaswitch Networks in a separate written agreement.
  */
 
-
-// Common STL includes.
-#include <cassert>
-#include <vector>
-#include <map>
-#include <set>
-#include <list>
-#include <queue>
-#include <string>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <iomanip>
-#include <algorithm>
-#include <time.h>
-
 #include "log.h"
 #include "utils.h"
 #include "s4.h"
@@ -37,7 +21,7 @@ S4::S4(std::string id,
        std::string callback_uri,
        AoRStore* aor_store,
        std::vector<S4*> remote_s4s) :
-  _id(id),
+  _s4_id(id),
   _chronos_timer_request_sender(new ChronosTimerRequestSender(chronos_connection)),
   _chronos_callback_uri(callback_uri),
   _aor_store(aor_store),
@@ -47,7 +31,7 @@ S4::S4(std::string id,
 
 S4::S4(std::string id,
        AoRStore* aor_store) :
-  _id(id),
+  _s4_id(id),
   _chronos_timer_request_sender(NULL),
   _chronos_callback_uri(""),
   _aor_store(aor_store),
@@ -66,12 +50,12 @@ void S4::initialise(BaseSubscriberManager* subscriber_manager)
   _subscriber_manager = subscriber_manager;
 }
 
-HTTPCode S4::handle_get(const std::string& id,
+HTTPCode S4::handle_get(const std::string& sub_id,
                         AoR** aor,
                         uint64_t& version,
                         SAS::TrailId trail)
 {
-  TRC_DEBUG("Handling GET for %s on %s", id.c_str(), _id.c_str());
+  TRC_DEBUG("Handling GET for %s on %s", sub_id.c_str(), _s4_id.c_str());
 
   HTTPCode rc;
   bool retry_get = true;
@@ -79,22 +63,26 @@ HTTPCode S4::handle_get(const std::string& id,
   while (retry_get == true)
   {
     // Delete the AoR on each iteration, and set the retry flag to false.
-    // The flag is only set to true if there's data contention on the write.
+    // The flag is only set to true if there's data contention on the write -
+    // this can happen if we look in the local store and don't find anything,
+    // look in the remote store and get some data, but by the time we try
+    // to write this back to the local store something else has already written
+    // some data for this subscriber.
     delete *aor; *aor = NULL;
     retry_get = false;
 
-    Store::Status store_rc = get_aor(id, aor, trail);
+    Store::Status store_rc = get_aor(sub_id, aor, trail);
 
     if (store_rc == Store::Status::ERROR)
     {
       TRC_DEBUG("Store error when getting subscriber %s on %s",
-                id.c_str(), _id.c_str());
+                sub_id.c_str(), _s4_id.c_str());
       rc = HTTP_SERVER_ERROR;
     }
     else if (store_rc == Store::Status::NOT_FOUND)
     {
       TRC_DEBUG("Subscriber not found when getting subscriber %s on %s",
-                id.c_str(), _id.c_str());
+                sub_id.c_str(), _s4_id.c_str());
 
       // If we don't have any bindings, try the remote stores.
       rc = HTTP_NOT_FOUND;
@@ -103,7 +91,7 @@ HTTPCode S4::handle_get(const std::string& id,
       {
         AoR* remote_aor = NULL;
         uint64_t unused_version;
-        HTTPCode remote_rc = remote_s4->handle_get(id,
+        HTTPCode remote_rc = remote_s4->handle_get(sub_id,
                                                    &remote_aor,
                                                    unused_version,
                                                    trail);
@@ -114,19 +102,19 @@ HTTPCode S4::handle_get(const std::string& id,
           // copy the information across.
           remote_aor->_cas = 0;
 
-          Store::Status store_rc = write_aor(id, *remote_aor, trail);
+          Store::Status store_rc = write_aor(sub_id, *remote_aor, trail);
 
           if (store_rc == Store::Status::ERROR)
           {
             TRC_DEBUG("Store error when adding subscriber %s to %s",
-                      id.c_str(), _id.c_str());
+                      sub_id.c_str(), _s4_id.c_str());
             delete remote_aor; remote_aor = NULL;
             rc = HTTP_SERVER_ERROR;
           }
           else if (store_rc == Store::Status::OK)
           {
             TRC_DEBUG("Successfully added the subscriber %s to %s",
-                      id.c_str(), _id.c_str());
+                      sub_id.c_str(), _s4_id.c_str());
             version = remote_aor->_cas;
             *aor = remote_aor;
             rc = HTTP_OK;
@@ -134,7 +122,7 @@ HTTPCode S4::handle_get(const std::string& id,
           else if (store_rc == Store::Status::DATA_CONTENTION)
           {
             TRC_DEBUG("Contention when adding subscriber %s to %s",
-                      id.c_str(), _id.c_str());
+                      sub_id.c_str(), _s4_id.c_str());
             delete remote_aor; remote_aor = NULL;
             retry_get = true;
           }
@@ -146,7 +134,7 @@ HTTPCode S4::handle_get(const std::string& id,
     else
     {
       TRC_DEBUG("Successfully retrieved subscriber %s from %s",
-                 id.c_str(), _id.c_str());
+                 sub_id.c_str(), _s4_id.c_str());
       version = (*aor)->_cas;
       rc = HTTP_OK;
     }
@@ -155,28 +143,28 @@ HTTPCode S4::handle_get(const std::string& id,
   return rc;
 }
 
-HTTPCode S4::handle_delete(const std::string& id,
+HTTPCode S4::handle_delete(const std::string& sub_id,
                            uint64_t version,
                            SAS::TrailId trail)
 {
-  TRC_DEBUG("Handling local DELETE for %s on %s", id.c_str(), _id.c_str());
+  TRC_DEBUG("Handling local DELETE for %s on %s", sub_id.c_str(), _s4_id.c_str());
 
   // Get the AoR from the data store - this only looks in the local store.
   AoR* aor = NULL;
-  Store::Status store_rc = get_aor(id, &aor, trail);
+  Store::Status store_rc = get_aor(sub_id, &aor, trail);
 
   HTTPCode rc;
 
   if (store_rc == Store::Status::ERROR)
   {
     TRC_DEBUG("Store error when getting subscriber %s on %s during a DELETE",
-              id.c_str(), _id.c_str());
+              sub_id.c_str(), _s4_id.c_str());
     rc = HTTP_SERVER_ERROR;
   }
   else if (store_rc == Store::Status::NOT_FOUND)
   {
     TRC_DEBUG("Subscriber %s isn't on %s, unable to delete it",
-              id.c_str(), _id.c_str());
+              sub_id.c_str(), _s4_id.c_str());
     rc = HTTP_PRECONDITION_FAILED;
   }
   else
@@ -187,29 +175,29 @@ HTTPCode S4::handle_delete(const std::string& id,
       aor->clear(true);
 
       // Write the empty AoR back to the store.
-      Store::Status store_rc = write_aor(id, *aor, trail);
+      Store::Status store_rc = write_aor(sub_id, *aor, trail);
 
       if (store_rc == Store::Status::OK)
       {
         TRC_DEBUG("Successfully deleted subscriber %s from %s",
-                   id.c_str(), _id.c_str());
+                   sub_id.c_str(), _s4_id.c_str());
         rc = HTTP_NO_CONTENT;
 
         // Subscriber has been deleted from the local site, so send the DELETE
         // out to the remote sites. The response to the SM is always going to be
         // OK independently of whether any remote DELETEs are successful.
-        replicate_delete_cross_site(id, trail);
+        replicate_delete_cross_site(sub_id, trail);
       }
       else if (store_rc == Store::Status::DATA_CONTENTION)
       {
         TRC_DEBUG("Contention when deleting subscriber %s from %s",
-                  id.c_str(), _id.c_str());
+                  sub_id.c_str(), _s4_id.c_str());
         rc = HTTP_PRECONDITION_FAILED;
       }
       else
       {
         TRC_DEBUG("Store error when deleting subscriber %s from %s",
-                  id.c_str(), _id.c_str());
+                  sub_id.c_str(), _s4_id.c_str());
         rc = HTTP_SERVER_ERROR;
       }
     }
@@ -228,10 +216,10 @@ HTTPCode S4::handle_delete(const std::string& id,
   return rc;
 }
 
-void S4::handle_remote_delete(const std::string& id,
+void S4::handle_remote_delete(const std::string& sub_id,
                               SAS::TrailId trail)
 {
-  TRC_DEBUG("Handling DELETE for %s on %s", id.c_str(), _id.c_str());
+  TRC_DEBUG("Handling DELETE for %s on %s", sub_id.c_str(), _s4_id.c_str());
 
   // Get the AoR from the data store - this only looks in the local store.
   bool retry_delete = true;
@@ -243,17 +231,17 @@ void S4::handle_remote_delete(const std::string& id,
     retry_delete = false;
 
     AoR* aor = NULL;
-    Store::Status store_rc = get_aor(id, &aor, trail);
+    Store::Status store_rc = get_aor(sub_id, &aor, trail);
 
     if (store_rc == Store::Status::ERROR)
     {
       TRC_DEBUG("Store error when getting subscriber %s on %s during a DELETE",
-                 id.c_str(), _id.c_str());
+                 sub_id.c_str(), _s4_id.c_str());
     }
     else if (store_rc == Store::Status::NOT_FOUND)
     {
       TRC_DEBUG("Subscriber %s isn't on %s, no need to delete it",
-                 id.c_str(), _id.c_str());
+                 sub_id.c_str(), _s4_id.c_str());
     }
     else
     {
@@ -261,23 +249,23 @@ void S4::handle_remote_delete(const std::string& id,
       aor->clear(true);
 
       // Write the empty AoR back to the store.
-      Store::Status store_rc = write_aor(id, *aor, trail);
+      Store::Status store_rc = write_aor(sub_id, *aor, trail);
 
       if (store_rc == Store::Status::OK)
       {
         TRC_DEBUG("Successfully deleted subscriber %s from %s",
-                   id.c_str(), _id.c_str());
+                   sub_id.c_str(), _s4_id.c_str());
       }
       else if (store_rc == Store::Status::DATA_CONTENTION)
       {
         TRC_DEBUG("Contention when deleting subscriber %s from %s",
-                  id.c_str(), _id.c_str());
+                  sub_id.c_str(), _s4_id.c_str());
         retry_delete = true;
       }
       else
       {
         TRC_DEBUG("Store error when deleting subscriber %s from %s",
-                  id.c_str(), _id.c_str());
+                  sub_id.c_str(), _s4_id.c_str());
       }
     }
 
@@ -285,35 +273,35 @@ void S4::handle_remote_delete(const std::string& id,
   }
 }
 
-HTTPCode S4::handle_put(const std::string& id,
+HTTPCode S4::handle_put(const std::string& sub_id,
                         const AoR& aor,
                         SAS::TrailId trail)
 {
-  TRC_DEBUG("Adding subscriber %s to %s", id.c_str(), _id.c_str());
+  TRC_DEBUG("Adding subscriber %s to %s", sub_id.c_str(), _s4_id.c_str());
 
   HTTPCode rc = HTTP_OK;
 
   // Attempt to write the data to the local store. We don't do a get first as
   // we expect the subscriber shouldn't exist. If the subscriber already
   // exists this will fail with data contention, and we'll return an error code
-  Store::Status store_rc = write_aor(id, (AoR&)aor, trail);
+  Store::Status store_rc = write_aor(sub_id, (AoR&)aor, trail);
 
   if (store_rc == Store::Status::OK)
   {
     TRC_DEBUG("Successfully added subscriber %s to %s",
-              id.c_str(), _id.c_str());
+              sub_id.c_str(), _s4_id.c_str());
     rc = HTTP_OK;
 
     // Subscriber has been added on the local site, so send the PUTs
     // out to the remote sites. The response to the SM is always going to be
     // OK independently of whether any remote PUTs are successful.
-    replicate_put_cross_site(id, aor, trail);
+    replicate_put_cross_site(sub_id, aor, trail);
   }
   else
   {
     // Failed to add data - we don't try and add the subscriber to any remote
     // sites.
-    TRC_DEBUG("Failed to add subscriber %s to %s", id.c_str(), _id.c_str());
+    TRC_DEBUG("Failed to add subscriber %s to %s", sub_id.c_str(), _s4_id.c_str());
 
     if (store_rc == Store::Status::ERROR)
     {
@@ -328,12 +316,12 @@ HTTPCode S4::handle_put(const std::string& id,
   return rc;
 }
 
-HTTPCode S4::handle_patch(const std::string& id,
+HTTPCode S4::handle_patch(const std::string& sub_id,
                           const PatchObject& po,
                           AoR** aor,
                           SAS::TrailId trail)
 {
-  TRC_DEBUG("Updating subscriber %s on %s", id.c_str(), _id.c_str());
+  TRC_DEBUG("Updating subscriber %s on %s", sub_id.c_str(), _s4_id.c_str());
 
   HTTPCode rc = HTTP_OK;
   bool retry_patch = true;
@@ -345,12 +333,12 @@ HTTPCode S4::handle_patch(const std::string& id,
     retry_patch = false;
     delete *aor; *aor = NULL;
 
-    Store::Status store_rc = get_aor(id, aor, trail);
+    Store::Status store_rc = get_aor(sub_id, aor, trail);
 
     if (store_rc == Store::Status::ERROR)
     {
       TRC_DEBUG("Store error when getting subscriber %s on %s during a PATCH",
-                 id.c_str(), _id.c_str());
+                 sub_id.c_str(), _s4_id.c_str());
       rc = HTTP_SERVER_ERROR;
     }
     else if (store_rc == Store::Status::NOT_FOUND)
@@ -358,35 +346,32 @@ HTTPCode S4::handle_patch(const std::string& id,
       // The subscriber can't be found - it's not valid to PATCH a non-existent
       // subscriber.
       TRC_DEBUG("Subscriber %s not found on %s during a PATCH",
-                 id.c_str(), _id.c_str());
-      rc = HTTP_PRECONDITION_FAILED;
+                 sub_id.c_str(), _s4_id.c_str());
+      rc = HTTP_NOT_FOUND;
     }
     else
     {
       // Update the AoR with the requested changes.
       (*aor)->patch_aor(po);
-      Store::Status store_rc = write_aor(id, *(*aor), trail);
+      Store::Status store_rc = write_aor(sub_id, *(*aor), trail);
 
       if (store_rc == Store::Status::OK)
       {
-        TRC_DEBUG("Updated subscriber %s on %s", id.c_str(), _id.c_str());
+        TRC_DEBUG("Updated subscriber %s on %s", sub_id.c_str(), _s4_id.c_str());
         rc = HTTP_OK;
 
         // Subscriber has been updated on the local site, so send the PATCHs
         // out to the remote sites. The response to the SM is always going to be
         // OK independently of whether any remote PATCHs are successful.
-        PatchObject remote_po = PatchObject(po);
-        remote_po.set_increment_cseq(false);
-        remote_po.set_minimum_cseq((*aor)->_notify_cseq);
-        replicate_patch_cross_site(id, remote_po, **aor, trail);
+        replicate_patch_cross_site(sub_id, po, **aor, trail);
       }
       else if (store_rc == Store::Status::DATA_CONTENTION)
       {
         // Failed to update the subscriber due to data contention. Retry the
         // update.
         TRC_DEBUG("Failed to update subscriber %s on %s due to contention",
-                  id.c_str(),
-                  _id.c_str());
+                  sub_id.c_str(),
+                  _s4_id.c_str());
         retry_patch = true;
       }
       else
@@ -394,8 +379,8 @@ HTTPCode S4::handle_patch(const std::string& id,
         // Failed to update the subscriber due to a store error. There's no
         // point in retrying. Delete the retrieved AoR to clean it up.
         TRC_DEBUG("Failed to update subscriber %s on %s due to a store error",
-                  id.c_str(),
-                  _id.c_str());
+                  sub_id.c_str(),
+                  _s4_id.c_str());
         delete *aor; *aor = NULL;
         rc = HTTP_SERVER_ERROR;
       }
@@ -405,17 +390,17 @@ HTTPCode S4::handle_patch(const std::string& id,
   return rc;
 }
 
-void S4::handle_timer_pop(const std::string& aor_id,
+void S4::handle_timer_pop(const std::string& sub_id,
                           SAS::TrailId trail)
 {
   if (_subscriber_manager != NULL)
   {
     TRC_DEBUG("Calling subscriber manager to handle the timer pop");
-    _subscriber_manager->handle_timer_pop(aor_id, trail);
+    _subscriber_manager->handle_timer_pop(sub_id, trail);
   }
 }
 
-void S4::mimic_timer_pop(const std::string& aor_id,
+void S4::mimic_timer_pop(const std::string& sub_id,
                          SAS::TrailId trail)
 {
   TRC_DEBUG("Mimicking a timer pop to subscriber manager");
@@ -423,39 +408,39 @@ void S4::mimic_timer_pop(const std::string& aor_id,
   // Create a task to send timer pop and put it on worker thread, same as
   // ChronosAoRTimeoutTask.
   PJUtils::run_callback_on_worker_thread(
-           new MimicTimerPopHandler(new MimicTimerPopTask(aor_id, this, trail)),
+           new MimicTimerPopHandler(new MimicTimerPopTask(sub_id, this, trail)),
            false);
 }
 
-void S4::replicate_delete_cross_site(const std::string& id,
+void S4::replicate_delete_cross_site(const std::string& sub_id,
                                      SAS::TrailId trail)
 {
   for (S4* remote_s4 : _remote_s4s)
   {
-    remote_s4->handle_remote_delete(id, trail);
+    remote_s4->handle_remote_delete(sub_id, trail);
   }
 }
 
-void S4::replicate_put_cross_site(const std::string& id,
+void S4::replicate_put_cross_site(const std::string& sub_id,
                                   const AoR& aor,
                                   SAS::TrailId trail)
 {
   for (S4* remote_s4 : _remote_s4s)
   {
-    HTTPCode rc = remote_s4->handle_put(id, aor, trail);
+    HTTPCode rc = remote_s4->handle_put(sub_id, aor, trail);
 
     if (rc == HTTP_PRECONDITION_FAILED)
     {
       // We've tried to do a PUT to a remote site that already has data. We need
       // to send a PATCH instead.
       TRC_DEBUG("Need to convert PUT to PATCH for %s on %s",
-                id.c_str(), _id.c_str());
+                sub_id.c_str(), _s4_id.c_str());
 
       PatchObject po;
       convert_aor_to_patch(aor, po);
 
       AoR* remote_aor = NULL;
-      remote_s4->handle_patch(id, po, &remote_aor, trail);
+      remote_s4->handle_patch(sub_id, po, &remote_aor, trail);
       delete remote_aor; remote_aor = NULL;
     }
   }
@@ -464,63 +449,67 @@ void S4::replicate_put_cross_site(const std::string& id,
 // Replicate the PATCH to each remote site. We don't care about the return code
 // from the remote sites unless it's PRECONDITION FAILED, in which case we want
 // to send a PUT instead (to reinstantiate the subscriber).
-void S4::replicate_patch_cross_site(const std::string& id,
+void S4::replicate_patch_cross_site(const std::string& sub_id,
                                     const PatchObject& po,
                                     const AoR& aor,
                                     SAS::TrailId trail)
 {
+  PatchObject remote_po = PatchObject(po);
+  remote_po.set_increment_cseq(false);
+  remote_po.set_minimum_cseq(aor._notify_cseq);
+
   for (S4* remote_s4 : _remote_s4s)
   {
     AoR* remote_aor = NULL;
-    HTTPCode rc = remote_s4->handle_patch(id, po, &remote_aor, trail);
+    HTTPCode rc = remote_s4->handle_patch(sub_id, remote_po, &remote_aor, trail);
     delete remote_aor; remote_aor = NULL;
 
-    if (rc == HTTP_PRECONDITION_FAILED)
+    if (rc == HTTP_NOT_FOUND)
     {
       // We've tried to do a PATCH to a remote site that doesn't have any data.
       // We need to send a PUT.
-      TRC_DEBUG("Need to convert PATCH to PUT for %s", _id.c_str());
-      AoR* aor_for_put = new AoR(id);
+      TRC_DEBUG("Need to convert PATCH to PUT for %s", _s4_id.c_str());
+      AoR* aor_for_put = new AoR(sub_id);
       aor_for_put->copy_aor(aor);
-      remote_s4->handle_put(id, *aor_for_put, trail);
+      remote_s4->handle_put(sub_id, *aor_for_put, trail);
       delete aor_for_put; aor_for_put = NULL;
     }
   }
 }
 
-Store::Status S4::get_aor(const std::string& id,
+Store::Status S4::get_aor(const std::string& sub_id,
                           AoR** aor,
                           SAS::TrailId trail)
 {
   Store::Status rc;
 
-  *aor = _aor_store->get_aor_data(id, trail);
+  *aor = _aor_store->get_aor_data(sub_id, trail);
 
   if (aor == NULL || *aor == NULL)
   {
     // Store error when getting data - return an error.
     TRC_DEBUG("Store error when getting the AoR for %s from %s",
-               id.c_str(), _id.c_str());
+               sub_id.c_str(), _s4_id.c_str());
     rc = Store::Status::ERROR;
   }
   else if ((*aor)->bindings().empty())
   {
     // We successfully contacted the store, but we didn't find the AoR. This
     // creates an empty AoR - delete this and return not found.
-    TRC_DEBUG("No AoR found for %s from %s", id.c_str(), _id.c_str());
+    TRC_DEBUG("No AoR found for %s from %s", sub_id.c_str(), _s4_id.c_str());
     rc = Store::Status::NOT_FOUND;
     delete *aor; *aor = NULL;
   }
   else
   {
-    TRC_DEBUG("Found an AoR for %s from %s", id.c_str(), _id.c_str());
+    TRC_DEBUG("Found an AoR for %s from %s", sub_id.c_str(), _s4_id.c_str());
     rc = Store::Status::OK;
   }
 
   return rc;
 }
 
-Store::Status S4::write_aor(const std::string& id,
+Store::Status S4::write_aor(const std::string& sub_id,
                             AoR& aor,
                             SAS::TrailId trail)
 {
@@ -540,14 +529,14 @@ Store::Status S4::write_aor(const std::string& id,
   if (_chronos_timer_request_sender)
   {
     TRC_DEBUG("Sending Chronos timer requests for local store");
-    _chronos_timer_request_sender->send_timers(id, _chronos_callback_uri, &aor, now, trail);
+    _chronos_timer_request_sender->send_timers(sub_id, _chronos_callback_uri, &aor, now, trail);
   }
 
   // Check if any binding has expired and send mimic timer pop.
   if (!aor.bindings().empty() && aor.get_next_expires() <= now)
   {
     TRC_DEBUG("Some binding has expired");
-    mimic_timer_pop(id, trail);
+    mimic_timer_pop(sub_id, trail);
   }
 
   // If we have a non-zero expiry, set the expiry in memcached to 10s later than
@@ -555,20 +544,21 @@ Store::Status S4::write_aor(const std::string& id,
   // Chronos can return a binding to expire, but memcached has already deleted
   // the AoR data (meaning that no NOTIFYs can be sent). If the expiry is 0, we
   // want to expire this data immediately so set the expiry to 0.
-  Store::Status rc = _aor_store->set_aor_data(id,
+  Store::Status rc = _aor_store->set_aor_data(sub_id,
                                               &aor,
                                               (aor.get_last_expires() != 0) ?
-                                                aor.get_last_expires() + 10 : 0,
+                                                aor.get_last_expires() + 10 :
+                                                0,
                                               trail);
   if (rc == Store::Status::OK)
   {
     TRC_DEBUG("Successfully written AoR for %s to %s",
-              id.c_str(), _id.c_str());
+              sub_id.c_str(), _s4_id.c_str());
   }
   else
   {
     TRC_DEBUG("Failed to write AoR for %s to %s",
-              id.c_str(), _id.c_str());
+              sub_id.c_str(), _s4_id.c_str());
   }
 
   return rc;
@@ -594,7 +584,7 @@ void S4::ChronosTimerRequestSender::build_tag_info (
   tag_map["SUB"] = aor->get_subscriptions_count();
 }
 
-void S4::ChronosTimerRequestSender::send_timers(const std::string& aor_id,
+void S4::ChronosTimerRequestSender::send_timers(const std::string& sub_id,
                                                 const std::string& callback_uri,
                                                 AoR* aor,
                                                 int now,
@@ -632,7 +622,7 @@ void S4::ChronosTimerRequestSender::send_timers(const std::string& aor_id,
   // Set the expiry time to be relative to now.
   int expiry = (next_expires > now) ? (next_expires - now) : (now);
 
-  set_timer(aor_id,
+  set_timer(sub_id,
             timer_id,
             callback_uri,
             expiry,
@@ -641,7 +631,7 @@ void S4::ChronosTimerRequestSender::send_timers(const std::string& aor_id,
 }
 
 void S4::ChronosTimerRequestSender::set_timer(
-                                          const std::string& aor_id,
+                                          const std::string& sub_id,
                                           std::string& timer_id,
                                           const std::string& callback_uri,
                                           int expiry,
@@ -650,7 +640,7 @@ void S4::ChronosTimerRequestSender::set_timer(
 {
   std::string temp_timer_id = "";
   HTTPCode status;
-  std::string opaque = "{\"aor_id\": \"" + aor_id + "\"}";
+  std::string opaque = "{\"aor_id\": \"" + sub_id + "\"}";
 
   // If a timer has been previously set for this binding, send a PUT.
   // Otherwise sent a POST.

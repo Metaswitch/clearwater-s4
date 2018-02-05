@@ -604,74 +604,73 @@ void AoR::copy_aor(const AoR& source_aor)
   _scscf_uri = source_aor._scscf_uri;
 }
 
-// Patch the AoR. This does the following:
-//
-// TODO
 void AoR::patch_aor(const PatchObject& po)
 {
   TRC_DEBUG("Patching the AoR for %s", _uri.c_str());
 
-  for (BindingPair b : po.get_update_bindings())
+  for (BindingPair patch_binding : po.get_update_bindings())
   {
-    TRC_DEBUG("Updating the binding %s", b.first.c_str());
+    TRC_DEBUG("Updating the binding %s", patch_binding.first.c_str());
 
-    for (BindingPair b2 : _bindings)
+    for (BindingPair aor_binding : _bindings)
     {
-      if (b.first == b2.first)
+      if (patch_binding.first == aor_binding.first)
       {
-        _bindings.erase(b2.first);
-        delete b2.second;
+        _bindings.erase(aor_binding.first);
+        delete aor_binding.second;
         break;
       }
     }
 
-    Binding* copy_b = new Binding(*(b.second));
-    _bindings.insert(std::make_pair(b.first, copy_b));
+    Binding* copy_binding = new Binding(*(patch_binding.second));
+    _bindings.insert(std::make_pair(patch_binding.first, copy_binding));
   }
 
-  for (std::string b_id : po.get_remove_bindings())
+  for (std::string binding_id : po.get_remove_bindings())
   {
-    TRC_DEBUG("Removing the binding %s", b_id.c_str());
+    TRC_DEBUG("Removing the binding %s", binding_id.c_str());
 
-    for (BindingPair b : _bindings)
+    for (BindingPair binding : _bindings)
     {
-      if (b_id == b.first)
+      if (binding_id == binding.first)
       {
-        _bindings.erase(b.first);
-        delete b.second;
+        _bindings.erase(binding.first);
+        delete binding.second;
         break;
       }
     }
   }
 
-  for (SubscriptionPair s : po.get_update_subscriptions())
+  for (SubscriptionPair patch_subscription : po.get_update_subscriptions())
   {
-    TRC_DEBUG("Updating the subscription %s", s.first.c_str());
+    TRC_DEBUG("Updating the subscription %s", patch_subscription.first.c_str());
 
-    for (SubscriptionPair s2 : _subscriptions)
+    for (SubscriptionPair aor_subscription : _subscriptions)
     {
-      if (s.first == s2.first)
+      if (patch_subscription.first == aor_subscription.first)
       {
-        _subscriptions.erase(s2.first);
-        delete s2.second;
+        _subscriptions.erase(aor_subscription.first);
+        delete aor_subscription.second;
         break;
       }
     }
 
-    Subscription* copy_s = new Subscription(*(s.second));
-    _subscriptions.insert(std::make_pair(s.first, copy_s));
+    Subscription* copy_subscription =
+                                 new Subscription(*(patch_subscription.second));
+    _subscriptions.insert(std::make_pair(patch_subscription.first,
+                                         copy_subscription));
   }
 
-  for (std::string s_id : po.get_remove_subscriptions())
+  for (std::string subscription_id : po.get_remove_subscriptions())
   {
-    TRC_DEBUG("Removing the subscription %s", s_id.c_str());
+    TRC_DEBUG("Removing the subscription %s", subscription_id.c_str());
 
-    for (SubscriptionPair s : _subscriptions)
+    for (SubscriptionPair subscription : _subscriptions)
     {
-      if (s_id == s.first)
+      if (subscription_id == subscription.first)
       {
-        _subscriptions.erase(s.first);
-        delete s.second;
+        _subscriptions.erase(subscription.first);
+        delete subscription.second;
         break;
       }
     }

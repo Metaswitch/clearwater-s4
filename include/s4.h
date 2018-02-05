@@ -43,12 +43,12 @@ public:
 
     /// Create and send any appropriate Chronos requests
     ///
-    /// @param aor_id       The AoR ID
+    /// @param sub_id       The AoR ID
     //  @param callback_uri Callback URI for Chronos timer
     /// @param aor_pair     The AoR pair to send Chronos requests for
     /// @param now          The current time
     /// @param trail        SAS trail
-    virtual void send_timers(const std::string& aor_id,
+    virtual void send_timers(const std::string& sub_id,
                              const std::string& callback_uri,
                              AoR* aor,
                              int now,
@@ -72,7 +72,7 @@ public:
     /// @param expiry       Timer length
     /// @param tags         Any tags to add to the Chronos timer
     /// @param trail        SAS trail
-    virtual void set_timer(const std::string& aor_id,
+    virtual void set_timer(const std::string& sub_id,
                            std::string& timer_id,
                            const std::string& callback_uri,
                            int expiry,
@@ -91,7 +91,8 @@ public:
   ///                                 URI.
   /// @param aor_store[in]          - Pointer to the underlying data store
   ///                                 interface.
-  /// @param remote_s4s[in]         - Pointers to all the remote S4s.
+  /// @param remote_s4s[in]         - A vector of pointers to all the remote
+  ///                                 S4s.
   S4(std::string id,
      ChronosConnection* chronos_connection,
      std::string callback_url,
@@ -102,8 +103,7 @@ public:
   ///
   /// @param id[in]        - Site name of the S4. This is only used in logs.
   /// @param aor_store[in] - Pointer to the underlying data store interface
-  S4(std::string id,
-     AoRStore* aor_store);
+  S4(std::string id, AoRStore* aor_store);
 
   /// Destructor.
   ///
@@ -123,20 +123,20 @@ public:
   /// doesn't impact the return code for the client call). If the data is
   /// successfully retrieved then S4 gives the data a version number as well.
   ///
-  /// @param id[in]       - The ID of the subscriber. This must be the default
+  /// @param sub_id[in]   - The ID of the subscriber. This must be the default
   ///                       public identity.
   /// @param aor[out]     - The retrieved data. This is only valid if the return
   ///                       code is Store::Status::OK. The caller must delete
   ///                       the AoR.
   /// @param version[out] - The version of the retrieved AoR.
-  /// @param trail[in]    - The SAS trail ID
+  /// @param trail[in]    - The SAS trail ID.
   ///
   /// @return Whether any data has been retrieved. This can be one of:
   ///   OK - The AoR was successfully retrieved.
   ///   NOT_FOUND - The subscriber has no stored data on any contactable site.
   ///   SERVER_ERROR - We failed to contact the local store; the subscriber
   ///                  information is unknown.
-  virtual HTTPCode handle_get(const std::string& id,
+  virtual HTTPCode handle_get(const std::string& sub_id,
                               AoR** aor,
                               uint64_t& version,
                               SAS::TrailId trail);
@@ -147,21 +147,22 @@ public:
   /// all contactable sites, the return code of this function only depends
   /// on whether the subscriber was deleted from the local site though.
   ///
-  /// @param id[in]      - The ID of the subscriber. This must be the default
+  /// @param sub_id[in]  - The ID of the subscriber. This must be the default
   ///                      public identity.
   /// @param version[in] - The version of the subscriber data that this is
   ///                      asking to delete.
-  /// @param trail[in]   - The SAS trail ID
+  /// @param trail[in]   - The SAS trail ID.
   ///
   /// @return Whether the data has been deleted. This can be one of:
   ///   NO_CONTENT - The AoR was successfully deleted from at least the local
-  ///                site (or wasn't present in the first place).
-  ///   PRECONDITION_FAILED - The current version of the subscriber's data is
-  ///                         different to the version that the client has
-  ///                         asked to delete. The versions must be the same.
+  ///                site.
+  ///   PRECONDITION_FAILED - This is returned when the either the current
+  ///                         version of the subscriber's data is different to
+  ///                         the version that the client has asked to delete,
+  ///                         or the data doesn't exist at all.
   ///   SERVER_ERROR - We failed to contact the local store; the subscriber
   ///                  information is unknown.
-  virtual HTTPCode handle_delete(const std::string& id,
+  virtual HTTPCode handle_delete(const std::string& sub_id,
                                  uint64_t version,
                                  SAS::TrailId trail);
 
@@ -170,10 +171,10 @@ public:
   /// contactable sites, the return code of this function only depends on
   /// whether the subscriber was added to the local site though.
   ///
-  /// @param id[in]  - The ID of the subscriber. This must be the default
-  ///                  public identity.
-  /// @param aor[in] - The AoR object to update the subscriber with.
-  /// @param trail   - The SAS trail ID
+  /// @param sub_id[in] - The ID of the subscriber. This must be the default
+  ///                     public identity.
+  /// @param aor[in]    - The AoR object to update the subscriber with.
+  /// @param trail      - The SAS trail ID.
   ///
   /// @return Whether the data has been deleted. This can be one of:
   ///   OK - The AoR was successfully deleted from at least the local site
@@ -181,7 +182,7 @@ public:
   ///   PRECONDITION_FAILED - The subscriber already exists.
   ///   SERVER_ERROR - We failed to contact the local store; the subscriber
   ///                  information is unknown.
-  virtual HTTPCode handle_put(const std::string& id,
+  virtual HTTPCode handle_put(const std::string& sub_id,
                               const AoR& aor,
                               SAS::TrailId trail);
 
@@ -190,13 +191,14 @@ public:
   /// sites, the return code of this function only depends on whether the
   /// subscriber was updated in the local site though.
   ///
-  /// @param id[in]   - The ID of the subscriber. This must be the default
-  ///                   public identity.
-  /// @param po[in]   - The patch object to patch and update the subscriber
-  ///                   with.
-  /// @param aor[out] - The retrieved data. This is only valid if the return
-  ///                   code is HTTP_OK. The caller must delete the AoR.
-  /// @param trail    - The SAS trail ID
+  /// @param sub_id[in] - The ID of the subscriber. This must be the default
+  ///                     public identity.
+  /// @param po[in]     - The patch object to patch and update the subscriber
+  ///                     with.
+  /// @param aor[out]   - The retrieved (and patched) data. This is only valid
+  ///                     if the return code is HTTP_OK. The caller must delete
+  ///                     the AoR.
+  /// @param trail      - The SAS trail ID.
   ///
   /// @return Whether the data has been deleted. This can be one of:
   ///   OK - The AoR was successfully deleted from at least the local site
@@ -204,75 +206,75 @@ public:
   ///   NOT_FOUND - The subscriber doesn't exist, so can't be patched.
   ///   SERVER_ERROR - We failed to contact the local store; the subscriber
   ///                  information is unknown.
-  virtual HTTPCode handle_patch(const std::string& id,
+  virtual HTTPCode handle_patch(const std::string& sub_id,
                                 const PatchObject& po,
                                 AoR** aor,
                                 SAS::TrailId trail);
 
+  /// Handle a timer pop by notifying Subscriber Manager.
+  ///
+  /// @param[in]  sub_id        The AoR ID to handle a timer pop for
+  /// @param[in]  trail         The SAS trail ID.
+  virtual void handle_timer_pop(const std::string& sub_id,
+                                SAS::TrailId trail);
+
+private:
   /// This deletes the subscriber from the local site. This should only be
   /// called from another S4, not a client.
   ///
-  /// @param id[in]    - The ID of the subscriber. This must be the default
-  ///                    public identity.
-  /// @param trail[in] - The SAS trail ID
+  /// @param sub_id[in] - The ID of the subscriber. This must be the default
+  ///                     public identity.
+  /// @param trail[in]  - The SAS trail ID.
   ///
   /// @return Whether the data has been deleted. This can be one of:
   ///   NO_CONTENT - The AoR was successfully deleted from the local site (or
   ///                wasn't present in the first place).
   ///   SERVER_ERROR - We failed to contact the local store; the subscriber
   ///                  information is unknown.
-  virtual void handle_remote_delete(const std::string& id,
+  virtual void handle_remote_delete(const std::string& sub_id,
                                     SAS::TrailId trail);
-  
-  /// Handle a timer pop by notifying Subscriber Manager.
-  ///
-  /// @param[in]  aor_id        The AoR ID to handle a timer pop for
-  /// @param[in]  trail         The SAS trail ID
-  virtual void handle_timer_pop(const std::string& aor_id,
-                                SAS::TrailId trail);
 
-private:
   /// This replicates a DELETE request from a client to the remote S4s. This
   /// doesn't return anything as the local S4 won't do anything if any
-  /// remote delete fails (this function handles the different failure cases
+  /// remote DELETE fails (this function handles the different failure cases
   /// itself).
   ///
-  /// @param id[in]    - The ID of the subscriber. This must be the default
-  ///                    public identity.
-  /// @param trail[in] - The SAS trail ID
-  void replicate_delete_cross_site(const std::string& aor_id,
+  /// @param sub_id[in] - The ID of the subscriber. This must be the default
+  ///                     public identity.
+  /// @param trail[in]  - The SAS trail ID.
+  void replicate_delete_cross_site(const std::string& sub_id,
                                    SAS::TrailId trail);
 
   /// This replicates a PATCH request from a client to the remote S4s. This
   /// doesn't return anything as the local S4 won't do anything if any
-  /// remote patch fails (this function handles the different failure cases
+  /// remote PATCH fails (this function handles the different failure cases
   /// itself).
   ///
-  /// @param id[in]    - The ID of the subscriber. This must be the default
-  ///                    public identity.
-  /// @param po[in]    - The patch object to patch and update the subscriber
-  ///                    with.
-  /// @param aor[in]   - The AoR object to update the subscriber with. This is
-  ///                    only used if the PATCH fails with PRECONDITION_FAILED,
-  ///                    which is returned if the subscriber doesn't exist on
-  ///                    the remote site. In this case we send a PUT with the
-  ///                    aor.
-  /// @param trail[in] - The SAS trail ID
-  void replicate_patch_cross_site(const std::string& aor_id,
+  /// @param sub_id[in] - The ID of the subscriber. This must be the default
+  ///                     public identity.
+  /// @param po[in]     - The patch object to patch and update the subscriber
+  ///                     with.
+  /// @param aor[in]    - The AoR object to update the subscriber with. This is
+  ///                     only used if any remote PATCH fails with
+  ///                     PRECONDITION_FAILED (i.e. the subscriber doesn't exist
+  ///                     on the remote site). In this case we send a PUT to
+  ///                     that site with the aor to recreate the subscriber.
+  /// @param trail[in]  - The SAS trail ID.
+  void replicate_patch_cross_site(const std::string& sub_id,
                                   const PatchObject& po,
                                   const AoR& aor,
                                   SAS::TrailId trail);
 
   /// This replicates a PUT request from a client to the remote S4s. This
   /// doesn't return anything as the local S4 won't do anything if any
-  /// remote puts fails (this function handles the different failure cases
+  /// remote PUT fails (this function handles the different failure cases
   /// itself).
   ///
-  /// @param id[in]    - The ID of the subscriber. This must be the default
-  ///                    public identity.
-  /// @param aor[in]   - The AoR object to update the subscriber with.
-  /// @param trail[in] - The SAS trail ID
-  void replicate_put_cross_site(const std::string& id,
+  /// @param sub_id[in] - The ID of the subscriber. This must be the default
+  ///                     public identity.
+  /// @param aor[in]    - The AoR object to update the subscriber with.
+  /// @param trail[in]  - The SAS trail ID.
+  void replicate_put_cross_site(const std::string& sub_id,
                                 const AoR& aor,
                                 SAS::TrailId trail);
 
@@ -280,11 +282,11 @@ private:
   /// and returns whether the get was successful. This only calls into the local
   /// store.
   ///
-  /// @param id[in]    - The ID of the subscriber to get data for.
-  /// @param aor[out]  - The retrieved data. This is only valid if the return
-  ///                    code is Store::Status::OK. The caller must delete the
-  ///                    AoR.
-  /// @param trail[in] - The SAS trail ID
+  /// @param sub_id[in] - The ID of the subscriber to get data for.
+  /// @param aor[out]   - The retrieved data. This is only valid if the return
+  ///                     code is Store::Status::OK. The caller must delete the
+  ///                     AoR.
+  /// @param trail[in]  - The SAS trail ID.
   ///
   /// @return Whether the AoR was successfully written. This can be one of:
   ///   OK - The AoR was successfully retrieved.
@@ -292,7 +294,7 @@ private:
   ///           not valid.
   ///   NOT_FOUND - We successfully contacted the store but there was no entry
   ///               for the subscriber. The AoR is not valid.
-  Store::Status get_aor(const std::string& aor_id,
+  Store::Status get_aor(const std::string& sub_id,
                         AoR** aor,
                         SAS::TrailId trail);
 
@@ -300,16 +302,16 @@ private:
   /// and returns whether the write was successful. This only calls into the
   /// local store.
   ///
-  /// @param id[in]    - The ID of the subscriber to update.
-  /// @param aor[in]   - The AoR object to write.
-  /// @param trail[in] - The SAS trail ID.
+  /// @param sub_id[in] - The ID of the subscriber to update.
+  /// @param aor[in]    - The AoR object to write.
+  /// @param trail[in]  - The SAS trail ID.
   ///
   /// @return Whether the AoR was successfully written. This can be one of:
   ///   OK - The AoR was successfully written.
   ///   ERROR - Something went wrong - there's no point in retrying
   ///   DATA_CONTENTION - We successfully contacted the store, but there was a
   ///                     CAS conflict. We can try the write again.
-  Store::Status write_aor(const std::string& id,
+  Store::Status write_aor(const std::string& sub_id,
                           AoR& aor,
                           SAS::TrailId trail);
 
@@ -317,26 +319,23 @@ private:
   /// worker thread. It's used whenever S4 finds that a binding has expired
   /// processing other task, so that the timer pop will trigger off a task in
   /// subscriber manager.
-  void mimic_timer_pop(const std::string& aor_id,
+  void mimic_timer_pop(const std::string& sub_id,
                        SAS::TrailId trail);
 
   /// Gets the ID of this S4. This is only used for logging.
   ///
-  /// @return The ID of this S4
-  inline std::string get_id() { return _id; }
+  /// @return The ID of this S4.
+  inline std::string get_id() { return _s4_id; }
 
   /// The ID of this S4.
-  std::string _id;
+  const std::string _s4_id;
 
   /// Responsible for sending Chronos timer request and only exists in local S4
   ChronosTimerRequestSender* _chronos_timer_request_sender;
 
-  /// For local S4 to store a reference to the subscriber manager it deals with
-  BaseSubscriberManager* _subscriber_manager;
-
   /// The callback URI this S4 puts on Chronos timers. This should be a hostname
   /// that resolves to all the local S4s in the local site.
-  std::string _chronos_callback_uri;
+  const std::string _chronos_callback_uri;
 
   /// The interface to Rogers (which owns actually reading and
   /// writing to Rogers, and coverting between an AoR object and the JSON
@@ -345,6 +344,9 @@ private:
 
   /// The remote S4s. This is empty if this S4 is a remote S4 already.
   std::vector<S4*> _remote_s4s;
+
+  /// For local S4 to store a reference to the subscriber manager it deals with
+  BaseSubscriberManager* _subscriber_manager;
 };
 
 #endif
