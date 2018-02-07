@@ -53,7 +53,7 @@ public:
   bool is_impu_barred(std::string uri);
 
   /// Returns all the unbarred URIs.
-  std::vector<std::string> get_unbarred_uris();
+  std::vector<std::string> get_unbarred_uris() const;
 
   /// Returns all the barred URIs.
   std::vector<std::string> get_barred_uris() const;

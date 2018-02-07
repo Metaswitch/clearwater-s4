@@ -110,13 +110,13 @@ bool AssociatedURIs::is_impu_barred(std::string uri)
 }
 
 // Returns all unbarred associated URIs.
-std::vector<std::string> AssociatedURIs::get_unbarred_uris()
+std::vector<std::string> AssociatedURIs::get_unbarred_uris() const
 {
   std::vector<std::string> unbarred_uris;
 
   for (std::string uri : _associated_uris)
   {
-    if (!_barred_map[uri])
+    if (!_barred_map.at(uri))
     {
       unbarred_uris.push_back(uri);
     }
