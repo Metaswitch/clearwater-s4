@@ -23,11 +23,26 @@
 #include "astaire_aor_store.h"
 #include "httpclient.h"
 #include "chronosconnection.h"
-#include "base_subscriber_manager.h"
 
 class S4
 {
 public:
+  /// @brief This class is the interface that a user of S4 must implement in
+  /// order to be notified of timer pops.
+  class TimerPopConsumer
+  {
+  public:
+    /// Method that is called to notify the consumer of a timer pop.
+    ///
+    /// @param [in] aor_id - The primary IMPU of the AoR on which a timer had
+    ///                      popped.
+    /// @param [in] trail  - The SAS trail ID to use for logging.
+    virtual void handle_timer_pop(const std::string& aor_id,
+                                  SAS::TrailId trail) = 0;
+
+    virtual ~TimerPopConsumer() {};
+  };
+
   /// @class S4::ChronosTimerRequestSender
   ///
   /// Class responsible for sending any requests to Chronos about
@@ -111,9 +126,8 @@ public:
   /// nothing to do to clean up.
   virtual ~S4();
 
-  /// Called by subscriber manager constructor to store a reference to the SM in
-  /// local S4.
-  void initialize(BaseSubscriberManager* subscriber_manager);
+  /// Registers a class to receive timer pops from S4.
+  void register_timer_pop_consumer(TimerPopConsumer* timer_pop_consumer);
 
   /// This sends a request to S4 to get the data for a subscriber. This looks
   /// in the local store. If the local store returns NOT_FOUND, this asks the
@@ -345,8 +359,8 @@ private:
   /// The remote S4s. This is empty if this S4 is a remote S4 already.
   std::vector<S4*> _remote_s4s;
 
-  /// For local S4 to store a reference to the subscriber manager it deals with
-  BaseSubscriberManager* _subscriber_manager;
+  /// For local S4 to store a reference to the object that receives timer pops.
+  TimerPopConsumer* _timer_pop_consumer;
 };
 
 #endif

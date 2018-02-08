@@ -44,10 +44,10 @@ S4::~S4()
   delete _chronos_timer_request_sender;
 }
 
-void S4::initialize(BaseSubscriberManager* subscriber_manager)
+void S4::register_timer_pop_consumer(TimerPopConsumer* timer_pop_consumer)
 {
   TRC_DEBUG("Setting reference to subscriber manager in local S4");
-  _subscriber_manager = subscriber_manager;
+  _timer_pop_consumer = timer_pop_consumer;
 }
 
 HTTPCode S4::handle_get(const std::string& sub_id,
@@ -393,10 +393,10 @@ HTTPCode S4::handle_patch(const std::string& sub_id,
 void S4::handle_timer_pop(const std::string& sub_id,
                           SAS::TrailId trail)
 {
-  if (_subscriber_manager != NULL)
+  if (_timer_pop_consumer != NULL)
   {
     TRC_DEBUG("Calling subscriber manager to handle the timer pop");
-    _subscriber_manager->handle_timer_pop(sub_id, trail);
+    _timer_pop_consumer->handle_timer_pop(sub_id, trail);
   }
 }
 
