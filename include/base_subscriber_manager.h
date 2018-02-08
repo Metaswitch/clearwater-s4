@@ -13,6 +13,8 @@
 #define BASE_SUBSCRIBER_MANAGER_H__
 
 #include "sas.h"
+#include "httpclient.h"
+#include "subscriber_data_utils.h"
 
 /// Base class for Subscriber Manager in Sprout. It's created solely for S4 to
 /// get a reference to SM (which should handle the timer pop).
@@ -20,9 +22,13 @@ class BaseSubscriberManager
 {
 public:
   virtual ~BaseSubscriberManager() {};
-  
+
   virtual void handle_timer_pop(const std::string& aor_id,
                                 SAS::TrailId trail) = 0;
+
+  virtual HTTPCode deregister_subscriber(const std::string& public_id,
+                                         const SubscriberDataUtils::EventTrigger& event_trigger,
+                                         SAS::TrailId trail) = 0;
 };
 
 #endif
