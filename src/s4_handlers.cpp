@@ -9,17 +9,12 @@
  * Metaswitch Networks in a separate written agreement.
  */
 
-extern "C" {
-#include <pjsip.h>
-#include <pjlib-util.h>
-#include <pjlib.h>
-}
 #include "s4_handlers.h"
 
 void AoRTimeoutTask::process_aor_timeout(const std::string& aor_id)
 {
   TRC_DEBUG("Handling timer pop for AoR id: %s", aor_id.c_str());
-  
+
   return _cfg->_s4->handle_timer_pop(aor_id,
                                      trail());
 }

@@ -14,7 +14,6 @@
 
 #include "httpstack.h"
 #include "httpstack_utils.h"
-#include "subscriber_manager.h"
 #include "s4.h"
 
 /// Base AoRTimeoutTask class for tasks that implement AoR timeout callbacks
@@ -39,7 +38,7 @@ public:
   virtual void run() = 0;
 
 protected:
-  
+
   /// @brief Call to Subscriber Manager to handle the timeout of this AoR.
   ///
   /// @param aor_id[in]    The AoR ID

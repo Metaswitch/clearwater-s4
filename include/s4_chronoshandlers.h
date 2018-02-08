@@ -13,7 +13,6 @@
 #define S4_CHRONOSHANDLERS_H__
 
 #include "s4_handlers.h"
-#include "pjutils.h"
 
 
 class ChronosAoRTimeoutTask : public AoRTimeoutTask
@@ -28,9 +27,9 @@ public:
   void run();
 
 protected:
-  
+
   /// @brief Parse Chronos timer pop request as JSON to retrieve aor_id
-  ///  
+  ///
   ///  @param body     body of the Chronos timer pop request
   ///
   ///  @return Whether the request body has been parsed as JSON. This may be:
