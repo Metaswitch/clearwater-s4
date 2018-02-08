@@ -40,9 +40,7 @@ protected:
   ///                  the opaque data is missing aor_id
   HTTPCode parse_request(const std::string& body);
 
-  /**
-   * @brief Deal with the timer pop request
-   */
+  /// @brief Deal with the timer pop request
   void handle_request();
 
   std::string _aor_id;
