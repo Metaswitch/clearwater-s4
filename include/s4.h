@@ -113,7 +113,7 @@ public:
 
   /// Called by subscriber manager constructor to store a reference to the SM in
   /// local S4.
-  void initialise(BaseSubscriberManager* subscriber_manager);
+  void initialize(BaseSubscriberManager* subscriber_manager);
 
   /// This sends a request to S4 to get the data for a subscriber. This looks
   /// in the local store. If the local store returns NOT_FOUND, this asks the

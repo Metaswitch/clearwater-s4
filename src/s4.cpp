@@ -44,7 +44,7 @@ S4::~S4()
   delete _chronos_timer_request_sender;
 }
 
-void S4::initialise(BaseSubscriberManager* subscriber_manager)
+void S4::initialize(BaseSubscriberManager* subscriber_manager)
 {
   TRC_DEBUG("Setting reference to subscriber manager in local S4");
   _subscriber_manager = subscriber_manager;
