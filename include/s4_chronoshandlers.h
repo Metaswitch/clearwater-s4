@@ -15,7 +15,6 @@
 #include "s4_handlers.h"
 #include "pjutils.h"
 
-class ChronosAoRTimeoutTaskHandler;
 
 class ChronosAoRTimeoutTask : public AoRTimeoutTask
 {
@@ -44,75 +43,6 @@ protected:
   void handle_request();
 
   std::string _aor_id;
-
-  friend class ChronosAoRTimeoutTaskHandler;
-};
-
-/// S4 handler for dealing with Chronos timer pop
-class ChronosAoRTimeoutTaskHandler : public PJUtils::Callback
-{
-private:
-  ChronosAoRTimeoutTask* _task;
-
-public:
-  ChronosAoRTimeoutTaskHandler(ChronosAoRTimeoutTask* task) :
-    _task(task)
-  {
-  }
-
-  virtual void run()
-  {
-    _task->handle_request();
-
-    delete _task;
-  }
-};
-
-/// Class definition comes after MimicTimerPopTask
-class MimicTimerPopHandler;
-
-/// The task to mimic a timer pop for (implicitly) expired bindings by callling
-/// S4 to handle_timer_pop.
-class MimicTimerPopTask
-{
-public:
-  MimicTimerPopTask(std::string aor_id,
-               S4* s4,
-               SAS::TrailId trail) :
-    _aor_id(aor_id),
-    _s4(s4),
-    _trail(trail)
-  {
-  }
-
-protected:
-  void handle_request();
-
-  std::string _aor_id;
-  S4* _s4;
-  SAS::TrailId _trail;
-
-  friend class MimicTimerPopHandler;
-};
-
-/// This handler puts the MimicTimerPopTask on workers thread.
-class MimicTimerPopHandler : public PJUtils::Callback
-{
-private:
-  MimicTimerPopTask* _task;
-
-public:
-  MimicTimerPopHandler(MimicTimerPopTask* task) :
-    _task(task)
-  {
-  }
-
-  virtual void run()
-  {
-    _task->handle_request();
-
-    delete _task;
-  }
 };
 
 #endif

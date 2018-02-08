@@ -405,11 +405,7 @@ void S4::mimic_timer_pop(const std::string& sub_id,
 {
   TRC_DEBUG("Mimicking a timer pop to subscriber manager");
 
-  // Create a task to send timer pop and put it on worker thread, same as
-  // ChronosAoRTimeoutTask.
-  PJUtils::run_callback_on_worker_thread(
-           new MimicTimerPopHandler(new MimicTimerPopTask(sub_id, this, trail)),
-           false);
+  handle_timer_pop(sub_id, trail);
 }
 
 void S4::replicate_delete_cross_site(const std::string& sub_id,
