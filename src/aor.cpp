@@ -32,11 +32,12 @@ AoR::AoR(std::string sip_uri) :
 /// Destructor.
 AoR::~AoR()
 {
-  clear(true);
+  clear();
 }
 
 
 /// Copy constructor.
+// LCOV_EXCL_START
 AoR::AoR(const AoR& other)
 {
   common_constructor(other);
@@ -47,7 +48,7 @@ AoR& AoR::operator= (AoR const& other)
 {
   if (this != &other)
   {
-    clear(true);
+    clear();
     common_constructor(other);
   }
 
@@ -138,37 +139,22 @@ void AoR::common_constructor(const AoR& other)
   _uri = other._uri;
   _scscf_uri = other._scscf_uri;
 }
+// LCOV_EXCL_STOP
 
 /// Clear all the bindings and subscriptions from this object.
-void AoR::clear(bool clear_emergency_bindings)
+void AoR::clear()
 {
-  for (Bindings::iterator i = _bindings.begin();
-       i != _bindings.end();
-       )
+  for (BindingPair binding : _bindings)
   {
-    if ((clear_emergency_bindings) || (!i->second->_emergency_registration))
-    {
-      delete i->second;
-      _bindings.erase(i++);
-    }
-    else
-    {
-      ++i;
-    }
+    delete binding.second;
   }
 
-  if (clear_emergency_bindings)
+  for (SubscriptionPair subscription : _subscriptions)
   {
-    _bindings.clear();
+    delete subscription.second;
   }
 
-  for (Subscriptions::iterator i = _subscriptions.begin();
-       i != _subscriptions.end();
-       ++i)
-  {
-    delete i->second;
-  }
-
+  _bindings.clear();
   _subscriptions.clear();
   _associated_uris.clear_uris();
 }
@@ -240,21 +226,6 @@ void AoR::remove_subscription(const std::string& to_tag)
   }
 }
 
-/// Remove all the bindings from an AOR object
-void AoR::clear_bindings()
-{
-  for (Bindings::const_iterator i = _bindings.begin();
-       i != _bindings.end();
-       ++i)
-  {
-    delete i->second;
-  }
-
-  // Clear the bindings map.
-  _bindings.clear();
-}
-
-
 Binding::Binding(std::string address_of_record) :
   _address_of_record(address_of_record),
   _cseq(0),
@@ -264,13 +235,19 @@ Binding::Binding(std::string address_of_record) :
 {}
 
 /// Copy constructor.
+// LCOV_EXCL_START
 Binding::Binding(const Binding& other)
 {
   _address_of_record = other._address_of_record;
   _uri = other._uri;
   _cid = other._cid;
-  _path_headers = other._path_headers;
-  _path_uris = other._path_uris;
+
+  _path_headers.clear();
+  for (std::string path : other._path_headers)
+  {
+    _path_headers.push_back(path);
+  }
+
   _cseq = other._cseq;
   _expires = other._expires;
   _priority = other._priority;
@@ -287,8 +264,13 @@ Binding& Binding::operator= (Binding const& other)
     _address_of_record = other._address_of_record;
     _uri = other._uri;
     _cid = other._cid;
-    _path_headers = other._path_headers;
-    _path_uris = other._path_uris;
+
+    _path_headers.clear();
+    for (std::string path : other._path_headers)
+    {
+      _path_headers.push_back(path);
+    }
+
     _cseq = other._cseq;
     _expires = other._expires;
     _priority = other._priority;
@@ -306,7 +288,6 @@ bool Binding::operator==(const Binding& other) const
       (_uri != other._uri) ||
       (_cid != other._cid) ||
       (_path_headers != other._path_headers) ||
-      (_path_uris != other._path_uris) ||
       (_cseq != other._cseq) ||
       (_expires != other._expires) ||
       (_priority != other._priority) ||
@@ -324,6 +305,7 @@ bool Binding::operator!=(const Binding& other) const
 {
   return !(operator==(other));
 }
+// LCOV_EXCL_STOP
 
 void Binding::
   to_json(rapidjson::Writer<rapidjson::StringBuffer>& writer) const
@@ -406,6 +388,7 @@ void Binding::from_json(const rapidjson::Value& b_obj)
 }
 
 /// Copy constructor.
+// LCOV_EXCL_START
 Subscription::Subscription(const Subscription& other)
 {
   _req_uri = other._req_uri;
@@ -461,6 +444,7 @@ bool Subscription::operator!=(const Subscription& other) const
 {
   return !(operator==(other));
 }
+// LCOV_EXCL_STOP
 
 void Subscription::
   to_json(rapidjson::Writer<rapidjson::StringBuffer>& writer) const
@@ -548,22 +532,18 @@ int AoR::get_next_expires()
   // Set a temp int to INT_MAX to compare expiry times to.
   int _next_expires = INT_MAX;
 
-  for (Bindings::const_iterator b = _bindings.begin();
-       b != _bindings.end();
-       ++b)
+  for (BindingPair b : _bindings)
   {
-    if (b->second->_expires < _next_expires)
+    if (b.second->_expires <= _next_expires)
     {
-      _next_expires = b->second->_expires;
+      _next_expires = b.second->_expires;
     }
   }
-  for (Subscriptions::const_iterator s = _subscriptions.begin();
-       s != _subscriptions.end();
-       ++s)
+  for (SubscriptionPair s : _subscriptions)
   {
-    if (s->second->_expires < _next_expires)
+    if (s.second->_expires <= _next_expires)
     {
-      _next_expires = s->second->_expires;
+      _next_expires = s.second->_expires;
     }
   }
 
@@ -571,8 +551,11 @@ int AoR::get_next_expires()
   // Return 0 to indicate there is nothing to expire.
   if (_next_expires == INT_MAX)
   {
+    // LCOV_EXCL_START - No UTs for unhittable code
     return 0;
+    // LCOV_EXCL_STOP
   }
+
   // Otherwise we return the value found.
   return _next_expires;
 }
@@ -709,6 +692,7 @@ PatchObject::~PatchObject()
 }
 
 /// Copy constructor.
+// LCOV_EXCL_START
 PatchObject::PatchObject(const PatchObject& other)
 {
   common_constructor(other);
@@ -759,6 +743,7 @@ void PatchObject::common_constructor(const PatchObject& other)
   _minimum_cseq = other.get_minimum_cseq();
   _increment_cseq = other.get_increment_cseq();
 }
+// LCOV_EXCL_STOP
 
 void PatchObject::clear()
 {

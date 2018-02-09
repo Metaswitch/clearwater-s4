@@ -139,7 +139,6 @@ Store::Status AstaireAoRStore::Connector::set_aor_data(
                                             SAS::TrailId trail)
 {
   std::string data = _serializer_deserializer->serialize_aor(aor_data);
-
   SAS::Event event(trail, SASEvent::REGSTORE_SET_START, 0);
   event.add_var_param(aor_id);
   SAS::report_event(event);

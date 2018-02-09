@@ -31,9 +31,6 @@ public:
   /// Destructor.
   virtual ~AstaireAoRStore();
 
-  // Called through to from handlers code.
-  virtual bool has_servers() override { return _connector->underlying_store_has_servers(); }
-
   /// Get the data for a particular address of record (registered SIP URI,
   /// in format "sip:2125551212@example.com"), creating it if necessary.
   /// May return NULL in case of error.  Result is owned
@@ -99,8 +96,6 @@ public:
                                AoR* aor_data,
                                int expiry,
                                SAS::TrailId trail);
-
-    bool underlying_store_has_servers() { return (_data_store != NULL) && _data_store->has_servers(); }
 
     Store* _data_store;
 
