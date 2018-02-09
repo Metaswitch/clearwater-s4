@@ -80,10 +80,6 @@ public:
   /// including the disply name, URI and any header parameters.
   std::list<std::string> _path_headers;
 
-  /// Contains the URI part of any path headers (in order) that were
-  /// present on the register. Empty if there were none.
-  std::list<std::string> _path_uris;
-
   /// The CSeq value of the REGISTER request.
   int _cseq;
 
@@ -302,7 +298,7 @@ public:
   void common_constructor(const AoR& other);
 
   /// Clear all the bindings and subscriptions from this object.
-  void clear(bool clear_emergency_bindings);
+  void clear();
 
   /// Retrieve a binding by Binding ID, creating an empty one if necessary.
   /// The created binding is completely empty, even the Contact URI field.
@@ -318,9 +314,6 @@ public:
   /// Remove a subscription for the specified To tag.  If there is no
   /// corresponding subscription does nothing.
   void remove_subscription(const std::string& to_tag);
-
-  // Remove the bindings from an AOR object
-  void clear_bindings();
 
   /// Retrieve all the bindings.
   inline const Bindings& bindings() const { return _bindings; }

@@ -34,9 +34,6 @@ public:
   /// Destructor.
   virtual ~AoRStore(){}
 
-  // Called through to from handlers code.
-  virtual bool has_servers() = 0;
-
   /// Get the data for a particular address of record (registered SIP URI,
   /// in format "sip:2125551212@example.com"), creating it if necessary.
   /// May return NULL in case of error.  Result is owned
