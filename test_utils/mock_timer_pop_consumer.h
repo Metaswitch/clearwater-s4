@@ -12,11 +12,13 @@
 #ifndef MOCK_TIMER_POP_CONSUMER_H__
 #define MOCK_TIMER_POP_CONSUMER_H__
 
+#include "gmock/gmock.h"
+
 class MockTimerPopConsumer : public S4::TimerPopConsumer
 {
 public:
   MOCK_METHOD2(handle_timer_pop, void(const std::string&, SAS::TrailId));
-}
+};
 
 #endif
 
