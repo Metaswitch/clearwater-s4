@@ -36,6 +36,8 @@ void ChronosAoRTimeoutTask::run()
   send_http_reply(HTTP_OK);
 
   handle_request();
+
+  delete this;
 }
 
 HTTPCode ChronosAoRTimeoutTask::parse_request(const std::string& body)
