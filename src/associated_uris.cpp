@@ -116,9 +116,12 @@ std::vector<std::string> AssociatedURIs::get_unbarred_uris() const
 
   for (std::string uri : _associated_uris)
   {
-    if (!_barred_map.at(uri))
+    if (_barred_map.find(uri) != _barred_map.end())
     {
-      unbarred_uris.push_back(uri);
+      if (!_barred_map.at(uri))
+      {
+        unbarred_uris.push_back(uri);
+      }
     }
   }
 
@@ -134,7 +137,10 @@ std::vector<std::string> AssociatedURIs::get_barred_uris() const
   {
     if (_barred_map.find(uri) != _barred_map.end())
     {
-      barred_uris.push_back(uri);
+      if (_barred_map.at(uri))
+      {
+        barred_uris.push_back(uri);
+      }
     }
   }
 
