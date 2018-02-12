@@ -39,7 +39,7 @@ public:
 
 protected:
 
-  /// @brief Call to Subscriber Manager to handle the timeout of this AoR.
+  /// @brief Process the timeout of this AoR by getting S4 to handle timer pop.
   ///
   /// @param aor_id[in]    The AoR ID
   void process_aor_timeout(const std::string& aor_id);
