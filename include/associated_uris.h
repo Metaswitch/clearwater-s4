@@ -33,11 +33,11 @@ public:
   AssociatedURIs();
   ~AssociatedURIs();
 
-  /// Gets sthe default IMPU from an implicit registration set.
+  /// Gets the default IMPU from an implicit registration set.
   bool get_default_impu(std::string& uri,
                         bool emergency);
 
-  /// Checks if a URI is in the list of assiated URIs.
+  /// Checks if a URI is in the list of associated URIs.
   bool contains_uri(std::string uri);
 
   /// Adds to the list of associated URIs.
