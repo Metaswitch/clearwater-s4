@@ -242,8 +242,13 @@ void AssociatedURIs::from_json(const rapidjson::Value& au_obj)
 
 bool AssociatedURIs::operator==(AssociatedURIs other) const
 {
+  std::vector<std::string> sorted_aus = _associated_uris;
+  std::sort(sorted_aus.begin(), sorted_aus.end());
+  std::vector<std::string> sorted_other_aus = other._associated_uris;
+  std::sort(sorted_other_aus.begin(), sorted_other_aus.end());
+
   // Only comparing associated URIs and barring, not wildcard mappings
-  if ((_associated_uris != other._associated_uris) ||
+  if ((sorted_aus != sorted_other_aus) ||
       (get_barred_uris() != other.get_barred_uris()))
   {
     return false;
