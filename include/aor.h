@@ -298,7 +298,7 @@ public:
   void common_constructor(const AoR& other);
 
   /// Clear all the bindings and subscriptions from this object.
-  void clear();
+  void clear(bool clear_associated_uris);
 
   /// Retrieve a binding by Binding ID, creating an empty one if necessary.
   /// The created binding is completely empty, even the Contact URI field.

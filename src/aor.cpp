@@ -32,7 +32,7 @@ AoR::AoR(std::string sip_uri) :
 /// Destructor.
 AoR::~AoR()
 {
-  clear();
+  clear(true);
 }
 
 
@@ -48,7 +48,7 @@ AoR& AoR::operator= (AoR const& other)
 {
   if (this != &other)
   {
-    clear();
+    clear(true);
     common_constructor(other);
   }
 
@@ -142,7 +142,7 @@ void AoR::common_constructor(const AoR& other)
 // LCOV_EXCL_STOP
 
 /// Clear all the bindings and subscriptions from this object.
-void AoR::clear()
+void AoR::clear(bool remove_associated_uris)
 {
   for (BindingPair binding : _bindings)
   {
@@ -156,9 +156,12 @@ void AoR::clear()
 
   _bindings.clear();
   _subscriptions.clear();
-  _associated_uris.clear_uris();
-}
 
+  if (remove_associated_uris)
+  {
+    _associated_uris.clear_uris();
+  }
+}
 
 /// Retrieve a binding by binding identifier, creating an empty one if
 /// necessary.  The created binding is completely empty, even the Contact URI

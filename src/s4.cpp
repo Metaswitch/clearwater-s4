@@ -172,7 +172,7 @@ HTTPCode S4::handle_delete(const std::string& sub_id,
     if (aor->_cas == version)
     {
       // Clear the AoR.
-      aor->clear();
+      aor->clear(false);
 
       // Write the empty AoR back to the store.
       Store::Status store_rc = write_aor(sub_id, *aor, trail);
@@ -246,7 +246,7 @@ void S4::handle_remote_delete(const std::string& sub_id,
     else
     {
       // Clear the AoR.
-      aor->clear();
+      aor->clear(false);
 
       // Write the empty AoR back to the store.
       Store::Status store_rc = write_aor(sub_id, *aor, trail);
@@ -516,7 +516,7 @@ Store::Status S4::write_aor(const std::string& sub_id,
   if (aor.bindings().empty() && !aor.subscriptions().empty())
   {
     TRC_DEBUG("Cleaning up AoR");
-    aor.clear();
+    aor.clear(false);
   }
 
   // If the AoR has only emergency bindings, then we should remove any
