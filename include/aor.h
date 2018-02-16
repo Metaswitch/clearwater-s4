@@ -207,12 +207,12 @@ public:
   /// A map of SubsriptionPairs
   std::map<std::string, Subscription*> _subscriptions_map;
 
-  /// Define this typedef to make looping through the above class easier.
+  /// Define this typedef to make looping through the above map easier.
   typedef std::pair<std::string, Subscription*> Element;
 
   /// Helper functions for handling the map.
   uint32_t size() const { return _subscriptions_map.size(); }
-  std::map<std::string, Subscription*>::const_iterator find(std::string subscription_id) const { return _subscriptions_map.find(subscription_id); }
+  std::map<std::string, Subscription*>::iterator find(std::string subscription_id) { return _subscriptions_map.find(subscription_id); }
   std::map<std::string, Subscription*>::const_iterator begin() const { return _subscriptions_map.begin(); }
   std::map<std::string, Subscription*>::const_iterator end() const { return _subscriptions_map.end(); }
   Subscription* at(std::string key) const { return _subscriptions_map.at(key); }
