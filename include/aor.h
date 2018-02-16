@@ -185,11 +185,42 @@ public:
   void from_json(const rapidjson::Value& s_obj);
 };
 
-/// Typedef the map Subscriptions and the pair SubscriptionPair. First is
-/// sometimes the To tag, but not always. Second is a pointer to a
-/// Subscription.
-typedef std::map<std::string, Subscription*> Subscriptions;
-typedef std::pair<std::string, Subscription*> SubscriptionPair;
+/// @class Subcriptions
+///
+/// Contains a constructor/destructor for handling memory, the map of
+/// subscriptions and helper functions for handling this map.
+class Subscriptions
+{
+public:
+  /// Constructor
+  Subscriptions();
+
+  /// Destructor
+  ~ Subscriptions()
+  {
+    for (Element s : _subscriptions_map)
+    {
+      delete s.second;
+    }
+  }
+
+  /// A map of SubsriptionPairs
+  std::map<std::string, Subscription*> _subscriptions_map;
+
+  /// Define this typedef to make looping through the above class easier.
+  typedef std::pair<std::string, Subscription*> Element;
+
+  /// Helper functions for handling the map.
+  uint32_t size() const { return _subscriptions_map.size(); }
+  std::map<std::string, Subscription*>::const_iterator find(std::string subscription_id) const { return _subscriptions_map.find(subscription_id); }
+  std::map<std::string, Subscription*>::const_iterator begin() const { return _subscriptions_map.begin(); }
+  std::map<std::string, Subscription*>::const_iterator end() const { return _subscriptions_map.end(); }
+  Subscription* at(std::string key) const { return _subscriptions_map.at(key); }
+  void insert(Element subscription) { _subscriptions_map.insert(subscription); }
+  void clear() { _subscriptions_map.clear(); }
+  void erase(std::map<std::string, Subscription*>::iterator ii) { _subscriptions_map.erase(ii); }
+  void erase(std::string key) { _subscriptions_map.erase(key); }
+};
 
 class PatchObject
 {
@@ -377,7 +408,7 @@ public:
   /// Map holding the bindings for a particular AoR indexed by binding ID.
   Bindings _bindings;
 
-  /// Map holding the subscriptions for this AoR, indexed by the To tag
+  /// Class holding the subscriptions for this AoR, indexed by the To tag
   /// generated when the subscription dialog was established.
   Subscriptions _subscriptions;
 

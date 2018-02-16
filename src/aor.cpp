@@ -80,7 +80,7 @@ bool AoR::operator==(const AoR& other) const
 
   if (_subscriptions.size() == other._subscriptions.size())
   {
-    for (SubscriptionPair subscription : _subscriptions)
+    for (Subscriptions::Element subscription : _subscriptions)
     {
       if (other._subscriptions.find(subscription.first) == other._subscriptions.end())
       {
@@ -124,7 +124,7 @@ void AoR::common_constructor(const AoR& other)
     _bindings.insert(std::make_pair(i->first, bb));
   }
 
-  for (Subscriptions::const_iterator i = other._subscriptions.begin();
+  for (std::map<std::string, Subscription*>::const_iterator i = other._subscriptions.begin();
        i != other._subscriptions.end();
        ++i)
   {
@@ -149,7 +149,7 @@ void AoR::clear()
     delete binding.second;
   }
 
-  for (SubscriptionPair subscription : _subscriptions)
+  for (Subscriptions::Element subscription : _subscriptions)
   {
     delete subscription.second;
   }
@@ -199,7 +199,7 @@ void AoR::remove_binding(const std::string& binding_id)
 Subscription* AoR::get_subscription(const std::string& to_tag)
 {
   Subscription* s;
-  Subscriptions::const_iterator i = _subscriptions.find(to_tag);
+  std::map<std::string, Subscription*>::const_iterator i = _subscriptions.find(to_tag);
   if (i != _subscriptions.end())
   {
     s = i->second;
@@ -218,7 +218,7 @@ Subscription* AoR::get_subscription(const std::string& to_tag)
 /// subscription, does nothing.
 void AoR::remove_subscription(const std::string& to_tag)
 {
-  Subscriptions::iterator i = _subscriptions.find(to_tag);
+  std::map<std::string, Subscription*>::iterator i = _subscriptions.find(to_tag);
   if (i != _subscriptions.end())
   {
     delete i->second;
@@ -512,7 +512,7 @@ int AoR::get_last_expires() const
     }
   }
 
-  for (SubscriptionPair s : _subscriptions)
+  for (Subscriptions::Element s : _subscriptions)
   {
     if (s.second->_expires > last_expires)
     {
@@ -539,7 +539,7 @@ int AoR::get_next_expires()
       _next_expires = b.second->_expires;
     }
   }
-  for (SubscriptionPair s : _subscriptions)
+  for (Subscriptions::Element s : _subscriptions)
   {
     if (s.second->_expires <= _next_expires)
     {
@@ -571,7 +571,7 @@ void AoR::copy_aor(const AoR& source_aor)
     *dst = *src;
   }
 
-  for (Subscriptions::const_iterator i = source_aor.subscriptions().begin();
+  for (std::map<std::string, Subscription*>::const_iterator i = source_aor.subscriptions().begin();
        i != source_aor.subscriptions().end();
        ++i)
   {
@@ -624,11 +624,11 @@ void AoR::patch_aor(const PatchObject& po)
     }
   }
 
-  for (SubscriptionPair patch_subscription : po.get_update_subscriptions())
+  for (Subscriptions::Element patch_subscription : po.get_update_subscriptions())
   {
     TRC_DEBUG("Updating the subscription %s", patch_subscription.first.c_str());
 
-    for (SubscriptionPair aor_subscription : _subscriptions)
+    for (Subscriptions::Element aor_subscription : _subscriptions)
     {
       if (patch_subscription.first == aor_subscription.first)
       {
@@ -648,7 +648,7 @@ void AoR::patch_aor(const PatchObject& po)
   {
     TRC_DEBUG("Removing the subscription %s", subscription_id.c_str());
 
-    for (SubscriptionPair subscription : _subscriptions)
+    for (Subscriptions::Element subscription : _subscriptions)
     {
       if (subscription_id == subscription.first)
       {
@@ -723,7 +723,7 @@ void PatchObject::common_constructor(const PatchObject& other)
     _remove_bindings.push_back(binding);
   }
 
-  for (SubscriptionPair subscription : other.get_update_subscriptions())
+  for (Subscriptions::Element subscription : other.get_update_subscriptions())
   {
     _update_subscriptions.insert(
                       std::make_pair(subscription.first,
@@ -752,7 +752,7 @@ void PatchObject::clear()
     delete b.second; b.second = NULL;
   }
 
-  for (SubscriptionPair s : _update_subscriptions)
+  for (Subscriptions::Element s : _update_subscriptions)
   {
     delete s.second; s.second = NULL;
   }
@@ -774,7 +774,7 @@ void convert_aor_to_patch(const AoR& aor, PatchObject& po)
 
   Subscriptions patch_subscriptions;
 
-  for (SubscriptionPair subscription : aor.subscriptions())
+  for (Subscriptions::Element subscription : aor.subscriptions())
   {
     patch_subscriptions.insert(
                       std::make_pair(subscription.first,
