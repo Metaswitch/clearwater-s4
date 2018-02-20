@@ -213,6 +213,7 @@ public:
   /// Helper functions for handling the map.
   uint32_t size() const { return _subscriptions_map.size(); }
   std::map<std::string, Subscription*>::iterator find(std::string subscription_id) { return _subscriptions_map.find(subscription_id); }
+  std::map<std::string, Subscription*>::const_iterator find(std::string subscription_id) const { return _subscriptions_map.find(subscription_id); }
   std::map<std::string, Subscription*>::const_iterator begin() const { return _subscriptions_map.begin(); }
   std::map<std::string, Subscription*>::const_iterator end() const { return _subscriptions_map.end(); }
   Subscription* at(std::string key) const { return _subscriptions_map.at(key); }
@@ -220,6 +221,7 @@ public:
   void clear() { _subscriptions_map.clear(); }
   void erase(std::map<std::string, Subscription*>::iterator ii) { _subscriptions_map.erase(ii); }
   void erase(std::string key) { _subscriptions_map.erase(key); }
+  bool empty() const { return _subscriptions_map.empty(); }
 };
 
 class PatchObject

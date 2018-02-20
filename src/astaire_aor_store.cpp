@@ -281,7 +281,7 @@ std::string AstaireAoRStore::JsonSerializerDeserializer::serialize_aor(AoR* aor_
     writer.String(JSON_SUBSCRIPTIONS);
     writer.StartObject();
     {
-      for (Subscriptions::const_iterator it = aor_data->subscriptions().begin();
+      for (std::map<std::string, Subscription*>::const_iterator it = aor_data->subscriptions().begin();
            it != aor_data->subscriptions().end();
            ++it)
       {
