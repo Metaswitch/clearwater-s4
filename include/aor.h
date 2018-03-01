@@ -193,10 +193,10 @@ class Subscriptions
 {
 public:
   /// Constructor
-  Subscriptions();
+  Subscriptions() {};
 
   /// Destructor
-  ~ Subscriptions()
+  ~Subscriptions()
   {
     for (Element s : _subscriptions_map)
     {
