@@ -25,7 +25,8 @@ S4::S4(std::string id,
   _chronos_timer_request_sender(new ChronosTimerRequestSender(chronos_connection)),
   _chronos_callback_uri(callback_uri),
   _aor_store(aor_store),
-  _remote_s4s(remote_s4s)
+  _remote_s4s(remote_s4s),
+  _timer_pop_consumer(NULL)
 {
 }
 
@@ -35,7 +36,8 @@ S4::S4(std::string id,
   _chronos_timer_request_sender(NULL),
   _chronos_callback_uri(""),
   _aor_store(aor_store),
-  _remote_s4s({})
+  _remote_s4s({}),
+  _timer_pop_consumer(NULL)
 {
 }
 
@@ -403,8 +405,6 @@ void S4::handle_timer_pop(const std::string& sub_id,
 void S4::mimic_timer_pop(const std::string& sub_id,
                          SAS::TrailId trail)
 {
-  TRC_DEBUG("Mimicking a timer pop to subscriber manager");
-
   handle_timer_pop(sub_id, trail);
 }
 
