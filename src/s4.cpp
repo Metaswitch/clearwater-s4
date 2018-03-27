@@ -25,7 +25,8 @@ S4::S4(std::string id,
   _chronos_timer_request_sender(new ChronosTimerRequestSender(chronos_connection)),
   _chronos_callback_uri(callback_uri),
   _aor_store(aor_store),
-  _remote_s4s(remote_s4s)
+  _remote_s4s(remote_s4s),
+  _timer_pop_consumer(NULL)
 {
 }
 
@@ -35,7 +36,8 @@ S4::S4(std::string id,
   _chronos_timer_request_sender(NULL),
   _chronos_callback_uri(""),
   _aor_store(aor_store),
-  _remote_s4s({})
+  _remote_s4s({}),
+  _timer_pop_consumer(NULL)
 {
 }
 
@@ -172,7 +174,7 @@ HTTPCode S4::handle_delete(const std::string& sub_id,
     if (aor->_cas == version)
     {
       // Clear the AoR.
-      aor->clear();
+      aor->clear(false);
 
       // Write the empty AoR back to the store.
       Store::Status store_rc = write_aor(sub_id, *aor, trail);
@@ -246,7 +248,7 @@ void S4::handle_remote_delete(const std::string& sub_id,
     else
     {
       // Clear the AoR.
-      aor->clear();
+      aor->clear(false);
 
       // Write the empty AoR back to the store.
       Store::Status store_rc = write_aor(sub_id, *aor, trail);
@@ -403,8 +405,6 @@ void S4::handle_timer_pop(const std::string& sub_id,
 void S4::mimic_timer_pop(const std::string& sub_id,
                          SAS::TrailId trail)
 {
-  TRC_DEBUG("Mimicking a timer pop to subscriber manager");
-
   handle_timer_pop(sub_id, trail);
 }
 
@@ -516,7 +516,7 @@ Store::Status S4::write_aor(const std::string& sub_id,
   if (aor.bindings().empty() && !aor.subscriptions().empty())
   {
     TRC_DEBUG("Cleaning up AoR");
-    aor.clear();
+    aor.clear(false);
   }
 
   // If the AoR has only emergency bindings, then we should remove any
