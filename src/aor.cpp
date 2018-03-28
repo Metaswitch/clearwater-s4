@@ -149,13 +149,7 @@ void AoR::clear(bool remove_associated_uris)
     delete binding.second;
   }
 
-  for (Subscriptions::Element subscription : _subscriptions)
-  {
-    delete subscription.second;
-  }
-
   _bindings.clear();
-  _subscriptions.clear();
 
   if (remove_associated_uris)
   {
@@ -753,11 +747,6 @@ void PatchObject::clear()
   for (BindingPair b : _update_bindings)
   {
     delete b.second; b.second = NULL;
-  }
-
-  for (Subscriptions::Element s : _update_subscriptions)
-  {
-    delete s.second; s.second = NULL;
   }
 }
 

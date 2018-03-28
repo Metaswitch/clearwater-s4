@@ -195,6 +195,36 @@ public:
   /// Constructor
   Subscriptions() {};
 
+  /// Copy Constructor
+  Subscriptions(const Subscriptions& other)
+  {
+    for (Subscriptions::Element s : other)
+    {
+      Subscription* copy_s = new Subscription(*(s.second));
+      _subscriptions_map.insert(std::make_pair(s.first, copy_s));
+    }
+  }
+
+  /// Assignment operator
+  Subscriptions& operator= (Subscriptions const& other)
+  {
+    if (this != &other)
+    {
+      for (Element s : _subscriptions_map)
+      {
+        delete s.second;
+      }
+
+      for (Subscriptions::Element s : other)
+      {
+        Subscription* copy_s = new Subscription(*(s.second));
+        _subscriptions_map.insert(std::make_pair(s.first, copy_s));
+      }
+    }
+
+    return *this;
+  }
+
   /// Destructor
   ~Subscriptions()
   {
