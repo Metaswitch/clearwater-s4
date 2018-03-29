@@ -535,7 +535,7 @@ Store::Status S4::write_aor(const std::string& sub_id,
   {
     TRC_DEBUG("Remove any subscriptions when there's only emergency bindings");
 
-    for (SubscriptionPair subscription : aor._subscriptions)
+    for (Subscriptions::Element subscription : aor._subscriptions)
     {
       delete subscription.second;
     }
